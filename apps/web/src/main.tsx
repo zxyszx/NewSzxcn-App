@@ -1,0 +1,52 @@
+import "@/lib/polyfills"
+import React from "react"
+import ReactDOM from "react-dom/client"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { Navigate, RouterProvider, createBrowserRouter, createHashRouter } from "react-router-dom"
+import { Toaster } from "@/components/ui/toaster"
+import { LanguageDomSync } from "@/lib/language"
+import { initializeTheme } from "@/lib/theme"
+import { applyAppearanceSettings } from "@/lib/appearance"
+import { isDemoMode } from "@/lib/demo"
+import { ProtectedLayout } from "@/components/protected-layout"
+import { AdminOnly } from "@/components/admin-only"
+import "./index.css"
+
+const LoginPage = React.lazy(() => import("@/pages/login").then((module) => ({ default: module.LoginPage })))
+const RegisterPage = React.lazy(() => import("@/pages/register").then((module) => ({ default: module.RegisterPage })))
+const MailPage = React.lazy(() => import("@/pages/mail").then((module) => ({ default: module.MailPage })))
+const AdminPage = React.lazy(() => import("@/pages/admin").then((module) => ({ default: module.AdminPage })))
+const ProfilePage = React.lazy(() => import("@/pages/profile").then((module) => ({ default: module.ProfilePage })))
+const SharedInboxPage = React.lazy(() => import("@/pages/shared-inbox").then((module) => ({ default: module.SharedInboxPage })))
+const NotFoundPage = React.lazy(() => import("@/pages/not-found").then((module) => ({ default: module.NotFoundPage })))
+
+initializeTheme()
+applyAppearanceSettings()
+
+const queryClient = new QueryClient({ defaultOptions: { queries: { refetchOnWindowFocus: false, staleTime: 10_000 } } })
+if (isDemoMode) document.title = "NewSzxcn 邮箱在线预览"
+const createRouter = isDemoMode ? createHashRouter : createBrowserRouter
+const router = createRouter([
+  { path: "/login", element: <LoginPage /> },
+  { path: "/register", element: <RegisterPage /> },
+  { path: "/shared-inbox", element: <SharedInboxPage /> },
+  { path: "/", element: <ProtectedLayout />, children: [
+    { index: true, element: <Navigate to="/mail" replace /> },
+    { path: "mail/*", element: <MailPage /> },
+    { path: "profile", element: <ProfilePage /> },
+    { path: "admin", element: <AdminOnly><AdminPage /></AdminOnly> },
+  ] },
+  { path: "*", element: <NotFoundPage /> },
+])
+
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <React.Suspense fallback={<div className="grid h-svh place-items-center text-sm text-muted-foreground">加载中...</div>}>
+        <RouterProvider router={router} />
+      </React.Suspense>
+      <Toaster />
+      <LanguageDomSync />
+    </QueryClientProvider>
+  </React.StrictMode>,
+)

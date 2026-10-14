@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x2=".3" y2="1"><stop stop-color="#071333"/><stop offset="1" stop-color="#39227b"/></linearGradient>
+    <linearGradient id="ink" x1="0" y1="0" x2=".6" y2="1"><stop stop-color="#ffffff"/><stop offset="1" stop-color="#cbbaff"/></linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <g id="mark">
+    <rect x="180" y="322" width="664" height="420" rx="70" fill="none" stroke="#b5a7ed" stroke-width="22"/>
+    <path d="M190 372 460 560Q512 598 564 560L834 372" fill="none" stroke="#b5a7ed" stroke-width="22" stroke-linejoin="round"/>
+    <path d="M731 232C534 240 347 308 367 416C382 491 581 513 625 590C689 705 486 790 267 780C443 753 560 699 548 631C534 560 332 529 306 442C267 309 509 232 731 232Z" fill="#141642" stroke="#141642" stroke-width="20" stroke-linejoin="round"/>
+    <path d="M731 232C534 240 347 308 367 416C382 491 581 513 625 590C689 705 486 790 267 780C443 753 560 699 548 631C534 560 332 529 306 442C267 309 509 232 731 232Z" fill="url(#ink)"/>
+    <path d="M743 172Q748 223 793 232Q748 240 743 292Q736 241 692 232Q736 223 743 172Z" fill="#fff"/>
+  </g>
+</svg>
