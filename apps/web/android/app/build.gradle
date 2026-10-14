@@ -1,14 +1,17 @@
 apply plugin: 'com.android.application'
 
 android {
+    buildFeatures { buildConfig true }
     namespace = "com.newszxcn.newmail"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
         applicationId "com.newszxcn.newmail"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 2
-        versionName "0.1.1-preview"
+        versionCode 4
+        versionName "0.2.0"
+        def nativeConfig = new groovy.json.JsonSlurper().parse(file('src/main/assets/capacitor.config.json'))
+        buildConfigField 'boolean', 'PUSH_CONFIGURED', String.valueOf(file('google-services.json').exists() && nativeConfig.plugins?.LiveMail?.enabled == true)
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -31,6 +34,8 @@ repositories {
 }
 
 dependencies {
+    implementation platform('com.google.firebase:firebase-bom:35.0.0')
+    implementation 'com.google.firebase:firebase-messaging'
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"

@@ -25,7 +25,7 @@ export function LoginPage() {
   const publicSettings = useQuery({ queryKey: ["public-settings"], queryFn: api.publicSettings, staleTime: 0, refetchOnMount: "always" })
   const [turnstileToken, setTurnstileToken] = React.useState("")
   const [challengeToken, setChallengeToken] = React.useState("")
-  const [loginOpen, setLoginOpen] = React.useState(false)
+  const [loginOpen, setLoginOpen] = React.useState(import.meta.env.VITE_NATIVE_APP === "true")
   const [visualTheme, setVisualTheme] = React.useState<"day" | "night">(() => {
     const savedTheme = window.localStorage.getItem("newszxcn:landing-theme")
     if (savedTheme === "day" || savedTheme === "night") return savedTheme

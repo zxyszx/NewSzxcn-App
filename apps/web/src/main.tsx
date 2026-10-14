@@ -7,7 +7,7 @@ import { Toaster } from "@/components/ui/toaster"
 import { LanguageDomSync } from "@/lib/language"
 import { initializeTheme } from "@/lib/theme"
 import { applyAppearanceSettings } from "@/lib/appearance"
-import { isDemoMode } from "@/lib/demo"
+import { isDemoMode, isNativeApp } from "@/lib/demo"
 import { ProtectedLayout } from "@/components/protected-layout"
 import { AdminOnly } from "@/components/admin-only"
 import "./index.css"
@@ -25,7 +25,7 @@ applyAppearanceSettings()
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { refetchOnWindowFocus: false, staleTime: 10_000 } } })
 if (isDemoMode) document.title = "NewSzxcn 邮箱在线预览"
-const createRouter = isDemoMode ? createHashRouter : createBrowserRouter
+const createRouter = isDemoMode || isNativeApp ? createHashRouter : createBrowserRouter
 const router = createRouter([
   { path: "/login", element: <LoginPage /> },
   { path: "/register", element: <RegisterPage /> },

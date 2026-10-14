@@ -11,6 +11,7 @@
     "build:mobile": "VITE_DEMO_MODE=true VITE_DEMO_BASE=/ tsc -b && VITE_DEMO_MODE=true VITE_DEMO_BASE=/ vite build --mode demo --outDir dist-mobile",
     "android:sync": "pnpm run build:mobile && cap sync android",
     "android:sync:public": "tsc -b && node scripts/build-public-mobile.mjs && cap sync android",
+    "android:sync:live": "NEWSZXCN_LIVE_MAIL=true pnpm run android:sync:public",
     "android:open": "cap open android",
     "preview": "vite preview --host 0.0.0.0",
     "check:shadcn": "node scripts/check-shadcn.mjs",

@@ -1,4 +1,5 @@
 import * as React from "react"
+import { hasNativeNotifications, enableNativeNotifications, showNativeIncomingMail, refreshNativePushRegistration } from "@/lib/native-notifications"
 import DOMPurify from "dompurify"
 import { type InfiniteData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Node, mergeAttributes, type Editor } from "@tiptap/core"
@@ -778,7 +779,7 @@ export function MailPage() {
         mailAudioContextRef.current = ctx
         if (ctx.state === "suspended") void ctx.resume()
       }
-      if ("Notification" in window && Notification.permission === "default") {
+      if (!hasNativeNotifications() && "Notification" in window && Notification.permission === "default") {
         void Notification.requestPermission()
       }
     }
@@ -827,7 +828,9 @@ export function MailPage() {
       tabIndex: 0,
     })
     playIncomingMailSound(mailAudioContextRef)
-    if ("Notification" in window && Notification.permission === "granted") {
+    if (!isDemoMode && hasNativeNotifications()) {
+      void showNativeIncomingMail().catch(() => undefined)
+    } else if ("Notification" in window && Notification.permission === "granted") {
       const notification = new Notification(title, {
         body: description,
         tag: `lanqin-mail-${activeMailboxId}`,
@@ -842,6 +845,12 @@ export function MailPage() {
 
   React.useEffect(() => {
     if (isDemoMode || !canReadMail) return
+    if (hasNativeNotifications()) void enableNativeNotifications().catch(() => undefined)
+    const refreshPush = () => {
+      if (hasNativeNotifications() && document.visibilityState === "visible") void refreshNativePushRegistration().catch(() => undefined)
+    }
+    document.addEventListener("visibilitychange", refreshPush)
+    const pushTimer = window.setInterval(refreshPush, 10 * 60 * 1000)
     const events = new EventSource("/api/events", { withCredentials: true })
     let syncTimer: number | undefined
     events.addEventListener("sync", () => {
@@ -858,6 +867,8 @@ export function MailPage() {
     return () => {
       events.close()
       window.clearTimeout(syncTimer)
+      window.clearInterval(pushTimer)
+      document.removeEventListener("visibilitychange", refreshPush)
     }
   }, [canReadMail, qc])
 

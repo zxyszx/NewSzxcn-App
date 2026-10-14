@@ -6,13 +6,15 @@ NewSzxcn 邮箱客户端的独立开源仓库。Android 安装包与后续桌面
 
 从 [Releases](https://github.com/zxyszx/NewSzxcn-App/releases) 下载 APK，不需要应用商店。
 
-**当前版本仍是离线只读演示版，不是真实邮件客户端。** 演示登录 `admin` / `admin`，不要输入真实邮箱密码。真实服务器目标为 `https://mail.newszxcn.com`，但当前 APK 尚未接入；真实收发信、附件、后台双通道推送均未完成。
+`0.2.0` 为正式签名的联网 APK，连接 `https://mail.newszxcn.com`，供真机验证。旧的 `0.1.1-preview` 是离线只读演示版，不支持真实收发信；不要在旧版输入真实邮箱密码。
 
-- Android：可安装演示预览，Android 7.0 及以上。
+已在模拟器验证真实登录、收发信、小附件保存与上传、自动更新，以及真实新邮件的 FCM 后台通知和点击返回邮箱。`0.2.0` 关闭 WebView 调试，仍需真机、锁屏、休眠和进程回收测试。**国内推送尚未接通，不承诺所有手机后台必达。** 详见 [联网验收说明](docs/LIVE_MAIL.md)。
+
+- Android：Android 7.0 及以上；使用 FCM 需要可用的 Google Play 服务与网络。
 - macOS：计划中，目前没有 Mac 安装包。
 - 应用名称：NewSzxcn。
 - Android 包名保持 `com.newszxcn.newmail`，避免仅因改名变成另一个应用。
-- 目前为 debug 签名；正式签名尚未配置。签名不同的 APK 不能覆盖安装。
+- `0.2.0` 起使用长期发布签名。旧 debug 演示版不能直接覆盖安装；先备份本地草稿等数据，再卸载旧版并安装新版，卸载会清除本地登录及应用数据。后续官方 APK 沿用同一发布签名。
 
 ## 构建 Android
 
@@ -24,6 +26,8 @@ pnpm --dir apps/web android:sync:public
 cd apps/web/android
 ./gradlew :app:assembleDebug
 ```
+
+联网联调版将上面的同步命令替换为 `pnpm --dir apps/web android:sync:live`，再执行 Gradle 构建。两种构建使用相同包名，安装会替换现有版本，不支持同时安装。请勿把演示凭据用于联网版。
 
 输出：`apps/web/android/app/build/outputs/apk/debug/app-debug.apk`。
 
@@ -41,7 +45,7 @@ pnpm --dir apps/web exec node ../../scripts/generate-icons.mjs
 
 ## 更新和安全
 
-GitHub Actions 提供手动构建与检查，输出测试 APK 工件；正式发布签名和自动发布后续单独配置。CI debug 签名与本地签名可能不同，请勿混用进行覆盖升级。
+GitHub Actions 提供手动构建与检查，输出 debug 测试 APK 工件，不是签名发布包。正式签名 APK 使用仓库外保管的长期签名密钥进行本地构建；步骤见 [发布构建](docs/ANDROID_RELEASE.md)。自动签名发布尚未配置，CI debug 包不能覆盖安装正式版。
 
 请勿提交真实账户、Cookie、推送配置、服务器数据或签名私钥。安全问题请通过 GitHub 私密漏洞报告提交，不要公开密码或用户邮件。
 
