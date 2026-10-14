@@ -8,8 +8,8 @@ android {
         applicationId "com.newszxcn.newmail"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 4
-        versionName "0.2.0"
+        versionCode 5
+        versionName "0.2.1"
         def nativeConfig = new groovy.json.JsonSlurper().parse(file('src/main/assets/capacitor.config.json'))
         buildConfigField 'boolean', 'PUSH_CONFIGURED', String.valueOf(file('google-services.json').exists() && nativeConfig.plugins?.LiveMail?.enabled == true)
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"

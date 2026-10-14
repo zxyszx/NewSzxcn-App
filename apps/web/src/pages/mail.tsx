@@ -3626,7 +3626,15 @@ function CompactMailView({
       </div>
       <ScrollArea className="min-h-0 flex-1">
         {loading && <MessageSkeleton />}
-        {messages.map((message) => <CompactMessageRow key={message.id} message={message} active={selectedId === message.id} checked={selectedIds.includes(message.id)} scheduled={scheduledDraftIds.has(message.id)} onCheckedChange={(checked) => onToggleSelected(message.id, checked)} onClick={() => onSelect(message.id)} onContextMenu={(event) => onContextMenu(event, message)} onStar={() => onStar(message)} canOrganize={canOrganize} />)}
+        {messages.map((message, index) => {
+          const group = messageDateGroup(message.receivedAt || message.sentAt)
+          const previous = messages[index - 1]
+          const previousGroup = previous ? messageDateGroup(previous.receivedAt || previous.sentAt) : ""
+          return <React.Fragment key={message.id}>
+            {group !== previousGroup && <div className="mail-date-group">{group}</div>}
+            <CompactMessageRow message={message} active={selectedId === message.id} checked={selectedIds.includes(message.id)} scheduled={scheduledDraftIds.has(message.id)} onCheckedChange={(checked) => onToggleSelected(message.id, checked)} onClick={() => onSelect(message.id)} onContextMenu={(event) => onContextMenu(event, message)} onStar={() => onStar(message)} canOrganize={canOrganize} />
+          </React.Fragment>
+        })}
         {!loading && messages.length === 0 && <div className="p-8 text-center text-sm text-muted-foreground">{emptyMessage}</div>}
         {!loading && hasMore && (
           <div className="border-b p-4 text-center">
@@ -3982,7 +3990,7 @@ function CompactMessageRow({ message, active, checked, scheduled, onCheckedChang
   const senderName = senderDisplayName(message)
   return (
     <div onClick={onClick} onContextMenu={onContextMenu} className={cn(
-      "cursor-pointer border-b border-l-2 px-3 py-2.5 text-[13px] transition-colors sm:grid sm:grid-cols-[28px_24px_minmax(112px,180px)_minmax(0,1fr)_86px_30px] sm:items-center sm:gap-2 sm:px-3 sm:py-2",
+      "min-w-0 max-w-full cursor-pointer border-b border-l-2 px-3 py-2.5 text-[13px] transition-colors sm:grid sm:grid-cols-[28px_24px_minmax(0,180px)_minmax(0,1fr)_86px_30px] sm:items-center sm:gap-2 sm:px-3 sm:py-2",
       message.isRead ? "border-l-transparent hover:bg-accent/50" : "border-l-primary bg-primary/5 font-semibold hover:bg-primary/10",
       active && "mail-selected-row"
     )}>
@@ -3995,7 +4003,7 @@ function CompactMessageRow({ message, active, checked, scheduled, onCheckedChang
         )}
         <div className="min-w-0 flex-1 sm:contents">
           <div className="flex min-w-0 items-center justify-between gap-2 sm:block">
-            <div className="flex min-w-0 items-center gap-1.5">
+            <div className="flex min-w-0 flex-1 items-center gap-1.5">
               <div className="min-w-0 truncate" title={senderTitle(message)}>{senderName}</div>
               {!message.isRead && <span className="h-2 w-2 shrink-0 rounded-full bg-primary" aria-label="未读" />}
             </div>

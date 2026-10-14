@@ -59,3 +59,17 @@ under the same application identity. Never regenerate it for a routine release.
   `8bfd627e22822e7194a7669b3269721f46ec5d3906214f4d8429da22256410ef`.
 - Real mail and background FCM acceptance was performed on the preceding debug
   build; the signed release still needs the user's real-phone acceptance.
+
+## 0.2.1 Layout Verification
+
+- Version code `5`; same signing certificate as `0.2.0` for in-place updates.
+- Playwright checked visible dates and document bounds at 320, 360, 375, 430,
+  700 and 1440 CSS pixels; no dates outside the viewport or document overflow.
+- Both list renderers now use the existing date grouping (today, yesterday,
+  this week, this month, older). Group-label checks passed.
+- Native `android.zoomEnabled` is true, without disabling viewport scaling;
+  the final live APK retains debugging disabled. Physical pinch gestures still
+  need confirmation on the user's phone.
+- Release build and all 6 native unit tests passed. Signed APK installation and
+  startup were checked on a temporary read-only emulator, preserving the
+  authenticated test environment.

@@ -3008,6 +3008,8 @@ html.workspace-ui [data-slot="dialog-content"].verified-email-dialog [data-slot=
 }
 
 @media (max-width: 767px) {
+  .mail-window .mail-content-grid { grid-template-columns: minmax(0, 1fr); }
+  .mail-window .mail-list-pane { width: 100%; max-width: 100%; }
   .mail-wallpaper { min-height: 100dvh; }
   .mail-wallpaper .mail-workspace-provider > div > header,
   .mail-wallpaper .mail-list-pane > div,
