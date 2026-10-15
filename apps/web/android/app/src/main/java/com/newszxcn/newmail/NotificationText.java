@@ -8,7 +8,7 @@ final class NotificationText {
     }
 
     static String title(String account, String subject) {
-        return !account.isEmpty() ? account : (!subject.isEmpty() ? subject : "NewSzxcn");
+        return !account.isEmpty() ? "收件箱 · " + account : (!subject.isEmpty() ? subject : "NewSzxcn");
     }
 
     static String body(String account, String subject) {

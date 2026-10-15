@@ -5,7 +5,7 @@ import static org.junit.Assert.assertEquals;
 
 public class NotificationTextTest {
     @Test public void accountIsTitleAndSubjectIsBody() {
-        assertEquals("inbox@example.test", NotificationText.title("inbox@example.test", "Test subject"));
+        assertEquals("收件箱 · inbox@example.test", NotificationText.title("inbox@example.test", "Test subject"));
         assertEquals("Test subject", NotificationText.body("inbox@example.test", "Test subject"));
     }
 
