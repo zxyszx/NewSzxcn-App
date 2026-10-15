@@ -1,5 +1,30 @@
 # Android Release Build
 
+## 0.2.7 Mobile Settings Release
+
+- Version code `11`; retains the existing release signing identity and package.
+- Includes the previously local-only 0.2.5/0.2.6 mobile settings work. Settings and
+  administration use grouped phone navigation, circular back controls and
+  directional transitions. Mobile editors use full-screen layouts; desktop
+  dialogs retain their existing presentation.
+- Appearance owns standard/compact mail list density. Mobile forms, contacts,
+  signatures, security and statistics use compact spacing and visible controls.
+- Settings search supports one-tap clearing with input focus retained; route
+  changes focus their headings without resetting the restored scroll position.
+  Trend dates stay inside the chart and empty states no longer reserve desktop
+  fixed heights on phones.
+- UI regression checks use an isolated demo APK and do not send mail or modify
+  production data. Run `scripts/test-mobile-management.mjs` against its debug
+  WebView with `CDP_URL`, `ADB`, `ANDROID_SERIAL` and optionally
+  `PLAYWRIGHT_MODULE`; never run it against an authenticated live WebView.
+- Verification covers 30 detail routes, eight editor flows, narrow screens,
+  larger text, dark mode, reduced motion, search clearing, scroll restoration,
+  Android back navigation and desktop dialog fallback. All nine Android release
+  unit tests, component-policy checks, release build and vital lint pass.
+- This release changes the client only. It does not deploy or replace the mail
+  server or add domestic push support. Back up local-only drafts before any
+  downgrade; do not clear application data as a routine update step.
+
 The `0.2.0` APK is a release build with a dedicated long-term signing identity,
 not the old debug certificate. Release signing does not mean every device or
 domestic push channel has been accepted. Verify those scenarios separately.

@@ -2193,6 +2193,7 @@ export function MailPage() {
     <div
       className="mail-wallpaper h-svh overflow-hidden"
       data-mail-theme={selectedThemeId}
+      data-density={displayMode}
       data-1p-ignore="true"
       data-lpignore="true"
       data-bwignore="true"
@@ -4015,7 +4016,7 @@ function CompactMessageRow({ message, active, checked, scheduled, onCheckedChang
   const senderName = senderDisplayName(message)
   return (
     <div onClick={onClick} onContextMenu={onContextMenu} className={cn(
-      "min-w-0 max-w-full cursor-pointer border-b border-l-2 px-3 py-2.5 text-[13px] transition-colors sm:grid sm:grid-cols-[28px_24px_minmax(0,180px)_minmax(0,1fr)_86px_30px] sm:items-center sm:gap-2 sm:px-3 sm:py-2",
+      "mail-compact-message-row min-w-0 max-w-full cursor-pointer border-b border-l-2 px-3 py-2.5 text-[13px] transition-colors sm:grid sm:grid-cols-[28px_24px_minmax(0,180px)_minmax(0,1fr)_86px_30px] sm:items-center sm:gap-2 sm:px-3 sm:py-2",
       message.isRead ? "border-l-transparent hover:bg-accent/50" : "border-l-primary bg-primary/5 font-semibold hover:bg-primary/10",
       active && "mail-selected-row"
     )}>

@@ -2,7 +2,7 @@ import * as React from "react"
 import DOMPurify from "dompurify"
 import { useSearchParams } from "react-router-dom"
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { AlertCircle, CheckCircle2, ChevronDown, ChevronRight, Circle, ClipboardList, Clock3, Cloud, Copy, Database, Download, ExternalLink, Eye, EyeOff, Globe2, HardDrive, KeyRound, Loader2, Mail, MoreHorizontal, RefreshCcw, Search, Send, ShieldCheck, Trash2, UserRound } from "lucide-react"
+import { AlertCircle, ArchiveRestore, CheckCircle2, ChevronDown, ChevronRight, Circle, ClipboardList, Clock3, Cloud, Copy, Database, Download, ExternalLink, Eye, EyeOff, Forward, Globe2, HardDrive, Inbox, KeyRound, LayoutDashboard, Loader2, Mail, Mailbox, MoreHorizontal, RefreshCcw, Search, Send, Settings, ShieldCheck, Trash2, UserRound } from "lucide-react"
 import { api, AdminOverview, AdminUser, Alias, DNSRecord, Domain, Mailbox as MailboxType, MailMessage, MailTemplate, MaildirSyncHealth, PermissionGroup, PermissionInfo, PermissionLimits, SystemSettings } from "@/lib/api"
 import { cn, decodeMimeHeader, formatBytes, formatDate } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
@@ -22,6 +22,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { ConfirmDialog } from "@/components/confirm-dialog"
 import { useMe } from "@/hooks/use-me"
+import { useIsMobile } from "@/hooks/use-mobile"
+import { ManagementDialogContent as DialogContent, MobileManagement, MobileManagementRow, MobileSettingsSearch, useManagementBack } from "@/components/mobile-management"
 import { useToast } from "@/hooks/use-toast"
 import { hasAnyPermission, hasPermission } from "@/lib/permissions"
 import type { BackupTransfer, DeliveryEvent, PermissionKey, TelegramPairing } from "@/lib/api-types"
@@ -44,6 +46,7 @@ const sectionMeta: Record<Section, { label: string; description: string }> = {
 }
 const sectionLabels = Object.fromEntries(Object.entries(sectionMeta).map(([key, value]) => [key, value.label])) as Record<Section, string>
 const sectionKeys = Object.keys(sectionLabels) as Section[]
+const sectionIcons = { overview: LayoutDashboard, users: UserRound, permissionGroups: ShieldCheck, domains: Globe2, mailboxes: Mailbox, aliases: Forward, messages: Inbox, sendAudit: ClipboardList, backups: ArchiveRestore, settings: Settings }
 const sectionPermissions: Record<Section, PermissionKey[]> = {
   overview: ["admin.overview.view"],
   users: ["admin.users.view"],
@@ -73,6 +76,9 @@ function compareAdminUsers(left: AdminUser, right: AdminUser) {
 }
 
 export function AdminPage() {
+  const isMobile = useIsMobile()
+  const [navigationSearch, setNavigationSearch] = React.useState("")
+  const [systemSearch, setSystemSearch] = React.useState("")
   const qc = useQueryClient()
   const { toast } = useToast()
   const me = useMe()
@@ -107,6 +113,15 @@ export function AdminPage() {
   const visibleSections = sectionKeys.filter((key) => hasAnyPermission(user, sectionPermissions[key]) && (key !== "backups" || user?.role === "admin"))
   const rawSection = params.get("section") as Section | null
   const section: Section = rawSection && visibleSections.includes(rawSection) ? rawSection : visibleSections[0] || "overview"
+  const mobileIndex = !rawSection || !visibleSections.includes(rawSection)
+  const settingsOptions = [
+    ...(canSettingsView ? [{ key: "base", label: "基础设置" }, { key: "smtp", label: "发信通道" }, { key: "storage", label: "存储设置" }, { key: "mail", label: "邮件设置" }, { key: "externalImap", label: "外部 IMAP" }] : []),
+    ...(canTemplatesView ? [{ key: "templates", label: "邮件模板" }] : []),
+    ...(canSettingsView ? [{ key: "security", label: "安全设置" }] : []),
+  ]
+  const settingsOption = settingsOptions.find((item) => item.key === params.get("settingsTab"))
+  const settingsIndex = section === "settings" && !settingsOption
+  const goMobileBack = useManagementBack(isMobile, mobileIndex ? "/mail" : section === "settings" && !settingsIndex ? "/admin?section=settings" : "/admin")
   const sectionQueries = section === "overview" ? [overview, ...(canLoadDomains ? [domains] : []), ...(canSettingsView ? [settings] : [])]
     : section === "users" ? [users, permissionGroups, domains]
       : section === "permissionGroups" ? [permissionGroups]
@@ -138,18 +153,14 @@ export function AdminPage() {
   }
 
   const overviewChecklist = sectionReady && section === "overview" ? setupChecklist(overview.data, domainItems, settings.data).filter((item) => visibleSections.includes(item.section)) : undefined
-  const changeSection = (next: Section) => setParams(next === "overview" ? {} : { section: next })
+  const changeSection = (next: Section) => setParams(next === "overview" && !isMobile ? {} : { section: next })
 
-  return (
-    <ScrollArea className="h-[calc(100svh-3rem)] md:h-svh">
-      <main className="admin-page admin-workspace-content min-h-[calc(100svh-3rem)] w-[100vw] min-w-0 max-w-[100vw] overflow-x-hidden px-2 pb-2 pt-2 sm:px-3 sm:pt-3 md:min-h-svh md:w-full md:max-w-full">
-        <AdminPageHeader section={section} refreshing={refreshing} onRefresh={refreshAdminPage} checklist={overviewChecklist} onSectionChange={changeSection} />
-
+  const content = <>
         {sectionError && <QueryFailure error={sectionError.error} onRetry={() => { void Promise.all(sectionQueries.map((query) => query.refetch())) }} />}
         {sectionLoading && <AdminSectionLoading overview={section === "overview"} />}
 
         {sectionReady && section === "overview" && canOverview && (
-          <section className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <section className="mobile-overview-stats mb-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Stat icon={<UserRound />} tone="primary" label="账号" value={overview.data?.users || 0} detail={`${overview.data?.activeUsers || 0} 个活跃`} />
             <Stat icon={<Globe2 />} tone="cyan" label="邮件域名" value={overview.data?.domains || 0} detail={domainItems.some((domain) => domain.dnsStatus === "ok") ? `${domainItems.filter((domain) => domain.dnsStatus === "ok").length} 个 DNS 正常` : "待检测"} />
             <Stat icon={<Mail />} tone="sky" label="邮箱" value={overview.data?.mailboxes || 0} detail={`${overview.data?.activeMailboxes || 0} 个活跃`} />
@@ -166,7 +177,26 @@ export function AdminPage() {
         {sectionReady && section === "messages" && <AdminMessagesSection mailboxes={mailboxItems} systemAdmin={user?.role === "admin"} />}
         {sectionReady && section === "sendAudit" && <AdminSendAuditSection mailboxes={mailboxItems} />}
         {sectionReady && section === "backups" && <BackupsSection />}
-        {sectionReady && section === "settings" && <SystemSettingsSection settings={settings.data} domains={domainItems} initialTab={params.get("settingsTab")} />}
+        {sectionReady && section === "settings" && <SystemSettingsSection key={isMobile ? params.get("settingsTab") : "desktop"} settings={settings.data} domains={domainItems} initialTab={params.get("settingsTab")} />}
+  </>
+  if (isMobile) return <MobileManagement title={mobileIndex ? "后台管理" : section === "settings" && settingsOption ? settingsOption.label : sectionLabels[section]} onBack={goMobileBack} pageKey={params.toString()} action={!mobileIndex && !settingsIndex ? <Button type="button" size="icon" variant="ghost" aria-label="刷新后台数据" title="刷新后台数据" disabled={refreshing} onClick={refreshAdminPage}><RefreshCcw className={refreshing ? "animate-spin" : ""} /></Button> : undefined}>
+    {mobileIndex ? <>
+      <MobileSettingsSearch value={navigationSearch} onChange={setNavigationSearch} />
+      <nav className="mobile-settings-group" aria-label="后台功能">{visibleSections.filter((key) => sectionLabels[key].includes(navigationSearch.trim())).map((key) => { const Icon = sectionIcons[key]; return <MobileManagementRow key={key} label={sectionLabels[key]} icon={<Icon />} onClick={() => changeSection(key)} /> })}</nav>
+      {!visibleSections.some((key) => sectionLabels[key].includes(navigationSearch.trim())) && <p role="status" className="py-6 text-center text-sm text-muted-foreground">没有匹配的设置项</p>}
+    </>
+      : settingsIndex ? <>
+        <MobileSettingsSearch value={systemSearch} onChange={setSystemSearch} />
+        <nav className="mobile-settings-group" aria-label="系统设置">{settingsOptions.filter((item) => item.label.toLowerCase().includes(systemSearch.trim().toLowerCase())).map((item) => <MobileManagementRow key={item.key} label={item.label} icon={item.key === "security" ? <ShieldCheck /> : item.key === "storage" ? <Database /> : item.key === "smtp" ? <Send /> : <Mail />} onClick={() => setParams({ section: "settings", settingsTab: item.key })} />)}</nav>
+        {!settingsOptions.some((item) => item.label.toLowerCase().includes(systemSearch.trim().toLowerCase())) && <p role="status" className="py-6 text-center text-sm text-muted-foreground">没有匹配的设置项</p>}
+      </>
+      : <div className="admin-page">{content}</div>}
+  </MobileManagement>
+  return (
+    <ScrollArea className="h-[calc(100svh-3rem)] md:h-svh">
+      <main className="admin-page admin-workspace-content min-h-[calc(100svh-3rem)] w-[100vw] min-w-0 max-w-[100vw] overflow-x-hidden px-2 pb-2 pt-2 sm:px-3 sm:pt-3 md:min-h-svh md:w-full md:max-w-full">
+        <AdminPageHeader section={section} refreshing={refreshing} onRefresh={refreshAdminPage} checklist={overviewChecklist} onSectionChange={changeSection} />
+        {content}
       </main>
     </ScrollArea>
   )
@@ -175,7 +205,7 @@ export function AdminPage() {
 function AdminSectionLoading({ overview = false }: { overview?: boolean }) {
   return (
     <div className="space-y-3" aria-label="正在加载后台数据" aria-busy="true">
-      {overview && <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">{Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-[88px] w-full" />)}</div>}
+      {overview && <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-[88px] w-full" />)}</div>}
       <Skeleton className={cn("w-full", overview ? "h-[126px]" : "h-[360px]")} />
       {overview && <Skeleton className="h-[152px] w-full" />}
       <span className="sr-only">加载中...</span>
@@ -1708,8 +1738,8 @@ function SystemSettingsSection({ settings, domains, initialTab }: { settings?: S
     setSettingsTab(tabs[0]?.key || "base")
   }, [settingsTab, tabs])
   return (
-    <form key={formKey} onSubmit={(event) => { event.preventDefault(); if (canUpdateSettings) save.mutate(new FormData(event.currentTarget)) }} className="space-y-3">
-      <div className="flex flex-wrap gap-1.5 rounded-lg border bg-card p-1.5">
+    <form key={formKey} data-settings-tab={settingsTab} onSubmit={(event) => { event.preventDefault(); if (canUpdateSettings) save.mutate(new FormData(event.currentTarget)) }} className="mobile-system-settings space-y-3">
+      <div className="hidden flex-wrap gap-1.5 rounded-lg border bg-card p-1.5 md:flex">
         {tabs.map((tab) => (
           <Button key={tab.key} type="button" variant={settingsTab === tab.key ? "default" : "ghost"} size="sm" onClick={() => setSettingsTab(tab.key)}>
             {tab.label}
@@ -2793,7 +2823,7 @@ function fieldNumber(form: FormData, name: string, fallback: number) {
 function SwitchRow({ label, checked, onCheckedChange, className = "" }: { label: string; checked: boolean; onCheckedChange: (checked: boolean) => void; className?: string }) {
   const id = React.useId()
   return (
-    <div className={`flex min-h-14 items-center justify-between gap-4 ${className}`}>
+    <div className={`management-switch-row flex min-h-14 items-center justify-between gap-4 ${className}`}>
       <Label htmlFor={id} className="text-base font-medium">{label}</Label>
       <Switch id={id} checked={checked} onCheckedChange={onCheckedChange} />
     </div>
@@ -2802,7 +2832,7 @@ function SwitchRow({ label, checked, onCheckedChange, className = "" }: { label:
 function Field({ label, required = true, id: suppliedId, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) {
   const generatedId = React.useId()
   const id = suppliedId || generatedId
-  return <div className="space-y-2"><Label htmlFor={id}>{label}</Label><Input id={id} required={required} {...props} /></div>
+  return <div className="admin-field space-y-2"><Label htmlFor={id}>{label}</Label><Input id={id} required={required} {...props} /></div>
 }
 function MailboxLimitField({ defaultValue }: { defaultValue: number }) {
   const id = React.useId()

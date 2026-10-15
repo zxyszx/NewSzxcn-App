@@ -2,6 +2,7 @@ import * as React from "react"
 import { Outlet, Link, useLocation } from "react-router-dom"
 import { ArchiveRestore, ClipboardList, Forward, Globe2, Inbox, LayoutDashboard, LogOut, Mailbox, Moon, Settings, ShieldCheck, Sun, UserCog } from "lucide-react"
 import { useMe } from "@/hooks/use-me"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { useLogout } from "@/hooks/use-logout"
 import { AuthGuard } from "@/components/auth-guard"
 import { Button } from "@/components/ui/button"
@@ -50,6 +51,7 @@ export function ProtectedLayout() {
 }
 
 function ProtectedContent() {
+  const isMobile = useIsMobile()
   const me = useMe()
   const location = useLocation()
   const logout = useLogout()
@@ -76,6 +78,7 @@ function ProtectedContent() {
   if (isMailRoute || isProfileRoute) {
     return <Outlet />
   }
+  if (isMobile && isAdminRoute) return <div className="admin-workspace-theme"><Outlet /></div>
 
   return (
     <SidebarProvider className="admin-workspace-theme">

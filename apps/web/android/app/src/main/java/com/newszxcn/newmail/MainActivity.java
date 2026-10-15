@@ -16,8 +16,6 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(MailNotificationsPlugin.class);
         super.onCreate(savedInstanceState);
-        if (!bridge.getConfig().getPluginConfiguration("LiveMail").getBoolean("enabled", false)) return;
-        AttachmentDownloads downloads = new AttachmentDownloads(this);
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override public void handleOnBackPressed() {
                 bridge.getWebView().evaluateJavascript(
@@ -28,6 +26,8 @@ public class MainActivity extends BridgeActivity {
                     });
             }
         });
+        if (!bridge.getConfig().getPluginConfiguration("LiveMail").getBoolean("enabled", false)) return;
+        AttachmentDownloads downloads = new AttachmentDownloads(this);
         CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().setAcceptThirdPartyCookies(bridge.getWebView(), false);
         bridge.setWebViewClient(new BridgeWebViewClient(bridge) {

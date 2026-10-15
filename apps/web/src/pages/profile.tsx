@@ -1,7 +1,7 @@
 import * as React from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate, useSearchParams } from "react-router-dom"
-import { ArrowLeft, BarChart3, Ban, Bell, BellOff, BookOpen, Check, CheckCircle2, ChevronDown, ChevronUp, Clock3, Code2, Contact, Copy, ExternalLink, Eye, HardDrive, Image, Info, KeyRound, LogOut, Mail, MailCheck, MailX, Monitor, Moon, PanelLeftOpen, PencilLine, PlayCircle, Plus, RefreshCcw, Search, SendHorizontal, Settings, Share2, ShieldCheck, SlidersHorizontal, Sun, Trash2, Users, X } from "lucide-react"
+import { ArrowLeft, BarChart3, Ban, Bell, BellOff, BookOpen, Check, CheckCircle2, ChevronDown, ChevronUp, Clock3, Code2, Contact, Copy, ExternalLink, Eye, HardDrive, Image, Info, KeyRound, LogOut, Mail, MailCheck, MailX, Monitor, Moon, PencilLine, PlayCircle, Plus, RefreshCcw, Search, SendHorizontal, Settings, Share2, ShieldCheck, SlidersHorizontal, Sun, Trash2, Users, X } from "lucide-react"
 import { QRCodeSVG } from "qrcode.react"
 import { api, APIToken, ExternalImapAccount, ExternalImapAccountPayload, ExternalImapFolder, ExternalImapOAuthProvider, ExternalImapStorageMode, ExternalImapSyncRun, ExternalImapTlsMode, ForwardingPendingBinding, ForwardingSettings, ForwardingVerifiedEmail, MailFolder, MailLabel, MailRule, MailRuleAction, MailRuleCondition, Mailbox, MailboxApplyOptions, MailSignature, MailStats, PermissionLimits } from "@/lib/api"
 import { cn, formatBytes } from "@/lib/utils"
@@ -12,8 +12,9 @@ import { DisplayMode, useDisplayMode } from "@/lib/display-mode"
 import { useMe } from "@/hooks/use-me"
 import { useLogout } from "@/hooks/use-logout"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { ManagementDialogContent as DialogContent, MobileManagement, MobileManagementRow, MobileSettingsSearch, useManagementBack } from "@/components/mobile-management"
 import { validatePasswordConfirm } from "@/lib/validation"
-import { hasPermission } from "@/lib/permissions"
+import { hasAdminAccess, hasPermission } from "@/lib/permissions"
 import { Button } from "@/components/ui/button"
 import { PasswordInput } from "@/components/ui/password-input"
 import { Input } from "@/components/ui/input"
@@ -23,11 +24,10 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { Dialog, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import { ConfirmDialog } from "@/components/confirm-dialog"
@@ -75,10 +75,10 @@ export function ProfilePage() {
   const [displayMode, setDisplayMode] = useDisplayMode()
   const [blockedMailboxId, setBlockedMailboxId] = React.useState("all")
   const [ruleDialogOpen, setRuleDialogOpen] = React.useState(false)
-  const [mobileSidebarOpen, setMobileSidebarOpen] = React.useState(false)
   const [externalRunAccountId, setExternalRunAccountId] = React.useState("")
   const [twoFactorRecoveryCodes, setTwoFactorRecoveryCodes] = React.useState<string[]>([])
   const isMobile = useIsMobile()
+  const [settingsSearch, setSettingsSearch] = React.useState("")
   const themeMountedRef = React.useRef(false)
 
   const rawTab = params.get("tab") as Tab | null
@@ -339,22 +339,24 @@ export function ProfilePage() {
   }, [])
 
   const logout = useLogout()
+  const mobileIndex = !rawTab && !rawAccountTab
+  const goMobileBack = useManagementBack(isMobile, mobileIndex ? "/mail" : "/profile")
   async function copy(text: string) { await navigator.clipboard.writeText(text); toast({ title: "已复制" }) }
   function setTab(next: Tab) {
     const visibleNext = visibleTabKeys.includes(next) ? next : "profile"
     const nextParams = new URLSearchParams(params)
-    if (visibleNext === "profile") nextParams.delete("tab")
+    if (visibleNext === "profile" && !isMobile) nextParams.delete("tab")
     else {
       nextParams.set("tab", visibleNext)
       nextParams.delete("accountTab")
     }
     setParams(nextParams)
-    setMobileSidebarOpen(false)
   }
   function setAccountTab(next: AccountSettingsTab) {
     const nextParams = new URLSearchParams(params)
-    nextParams.delete("tab")
-    if (next === "account") nextParams.delete("accountTab")
+    if (isMobile) nextParams.set("tab", "profile")
+    else nextParams.delete("tab")
+    if (next === "account" && !isMobile) nextParams.delete("accountTab")
     else nextParams.set("accountTab", next)
     setParams(nextParams)
   }
@@ -411,6 +413,10 @@ export function ProfilePage() {
   )
 
   const pageTitle = tabs[tab].label
+  const matchesSettingsSearch = (label: string) => label.toLocaleLowerCase().includes(settingsSearch.trim().toLocaleLowerCase())
+  const mobileAccountTabs = accountSettingTabs.filter((item) => matchesSettingsSearch(item.label))
+  const mobileToolTabs = visibleTabKeys.filter((key) => key !== "profile" && matchesSettingsSearch(tabs[key].label))
+  const showMobileAdmin = hasAdminAccess(user) && matchesSettingsSearch("后台管理")
   const pageSubtitle = tab === "stats" ? "查看邮件收发趋势、分布情况和常用联系人。" : undefined
   const pageAction = tab === "stats"
     ? <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -424,31 +430,31 @@ export function ProfilePage() {
   return (
     <div className="profile-workspace-theme h-svh overflow-hidden bg-background">
       {isMobile ? (
-        <div className="flex h-full min-h-0 flex-col">
-          <header className="flex h-14 shrink-0 items-center gap-2 border-b px-3">
-            <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
-              <SheetTrigger asChild>
-                <Button size="icon" variant="ghost" aria-label="打开导航"><PanelLeftOpen className="h-4 w-4" /></Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-[85vw] max-w-80 p-0 [&>button]:hidden" aria-describedby={undefined}>
-                <SheetTitle className="sr-only">管理导航</SheetTitle>
-                <div className="h-svh">{sidebarContent}</div>
-              </SheetContent>
-            </Sheet>
-            <div className="min-w-0 flex-1 text-sm font-semibold">{pageTitle}</div>
-            <Button type="button" variant="ghost" size="icon" onClick={() => navigate("/")} aria-label="返回邮箱"><ArrowLeft className="h-4 w-4" /></Button>
-          </header>
-          <ScrollArea className="min-h-0 flex-1">
-            <main className="w-full pb-2">
-              {tab !== "mailboxes" && <SettingsPageHeader title={pageTitle} subtitle={pageSubtitle} action={pageAction} activeTab={tab === "profile" ? accountTab : undefined} onAccountTabChange={setAccountTab} />}
+        <MobileManagement title={mobileIndex ? "设置" : tab === "profile" ? accountSettingTabs.find((item) => item.key === accountTab)!.label : pageTitle} onBack={goMobileBack} pageKey={params.toString()}>
+          {mobileIndex ? <>
+            <MobileSettingsSearch value={settingsSearch} onChange={setSettingsSearch} />
+            <div className="mobile-management-account">
+              <Avatar className="size-11 shrink-0"><AvatarFallback>{(user.displayName || user.email || "N").slice(0, 1).toUpperCase()}</AvatarFallback></Avatar>
+              <div className="min-w-0"><div className="break-words font-semibold">{user.displayName || "NewSzxcn"}</div><div className="break-all text-sm text-muted-foreground">{user.email || selectedMailbox?.address}</div></div>
+            </div>
+            {mobileAccountTabs.length > 0 && <section className="mobile-settings-group" aria-label="账号与偏好">
+              {mobileAccountTabs.map((item) => <MobileManagementRow key={item.key} label={item.label} icon={item.key === "security" ? <ShieldCheck /> : item.key === "clients" ? <Bell /> : item.key === "appearance" ? <Sun /> : item.key === "mail" ? <Mail /> : <Settings />} onClick={() => setAccountTab(item.key)} />)}
+            </section>}
+            {mobileToolTabs.length > 0 && <section className="mobile-settings-group" aria-label="邮箱与工具">
+              {mobileToolTabs.map((key) => <MobileManagementRow key={key} label={tabs[key].label} icon={tabs[key].icon} onClick={() => setTab(key)} />)}
+            </section>}
+            {showMobileAdmin && <section className="mobile-settings-group"><MobileManagementRow label="后台管理" icon={<ShieldCheck />} onClick={() => navigate("/admin")} /></section>}
+            {!mobileAccountTabs.length && !mobileToolTabs.length && !showMobileAdmin && <p role="status" className="py-6 text-center text-sm text-muted-foreground">没有匹配的设置项</p>}
+            <div className="pt-6"><Button type="button" variant="outline" className="w-full text-destructive" onClick={logout}><LogOut className="size-4" />退出登录</Button></div>
+          </> : <>
+              {pageAction && <div className="mb-4">{pageAction}</div>}
               <div className={contentFrameClass(tab)}>
                 <div className={cn("profile-page-surface", tab !== "profile" && "profile-page-continuous-surface")}>
                   {renderTab()}
                 </div>
               </div>
-            </main>
-          </ScrollArea>
-        </div>
+          </>}
+        </MobileManagement>
       ) : (
         <div className="flex h-full min-h-0 w-full">
           {sidebarContent}
@@ -688,7 +694,7 @@ type AccountSettingsSectionProps = {
 function AccountSettingsSection(props: AccountSettingsSectionProps) {
   let content: React.ReactNode
   if (props.activeTab === "appearance") {
-    content = <AppearanceSettingsSection mode={props.themeMode} onModeChange={props.onThemeModeChange} />
+    content = <AppearanceSettingsSection mode={props.themeMode} onModeChange={props.onThemeModeChange} displayMode={props.displayMode} onDisplayModeChange={props.onDisplayModeChange} />
   } else if (props.activeTab === "mail") {
     content = (
       <MailPreferencesSection
@@ -731,8 +737,6 @@ function AccountSettingsSection(props: AccountSettingsSectionProps) {
         profile={props.profile}
         stats={props.stats}
         showStats={props.showStats}
-        displayMode={props.displayMode}
-        onDisplayModeChange={props.onDisplayModeChange}
         selectedMailbox={props.selectedMailbox}
         mailboxes={props.mailboxes}
         onOpenCleanup={props.onOpenCleanup}
@@ -744,7 +748,7 @@ function AccountSettingsSection(props: AccountSettingsSectionProps) {
 
 const appearanceAccentOptions = ["#2f75e8", "#8b5cf6", "#ec4899", "#ef4444", "#0f9f9a", "#2f9e6f"]
 
-function AppearanceSettingsSection({ mode, onModeChange }: { mode: ThemeMode; onModeChange: (mode: ThemeMode) => void }) {
+function AppearanceSettingsSection({ mode, onModeChange, displayMode, onDisplayModeChange }: { mode: ThemeMode; onModeChange: (mode: ThemeMode) => void; displayMode: DisplayMode; onDisplayModeChange: (mode: DisplayMode) => void }) {
   const [appearance, setAppearance] = React.useState<AppearanceSettings>(getAppearanceSettings)
 
   function updateAppearance(next: AppearanceSettings) {
@@ -753,7 +757,11 @@ function AppearanceSettingsSection({ mode, onModeChange }: { mode: ThemeMode; on
   }
 
   return (
-    <div className="appearance-settings-page profile-continuous-panel">
+    <div className="appearance-settings-page space-y-4">
+      <div className="mail-density-segments" role="group" aria-label="邮件列表显示模式">
+        {(["detailed", "compact"] as DisplayMode[]).map((value) => <Button key={value} type="button" variant="ghost" aria-pressed={displayMode === value} onClick={() => onDisplayModeChange(value)}>{value === "detailed" ? "标准布局" : "紧凑布局"}</Button>)}
+      </div>
+      <div className="profile-continuous-panel">
       <SettingsCard title="显示模式" subtitle="控制邮箱与设置页面的明暗外观。" surface="section">
         <div className="appearance-segments" role="group" aria-label="显示模式">
           {([
@@ -845,6 +853,7 @@ function AppearanceSettingsSection({ mode, onModeChange }: { mode: ThemeMode; on
           </div>
         </div>
       </SettingsCard>
+      </div>
     </div>
   )
 }
@@ -853,6 +862,7 @@ function SettingsCard({ title, subtitle, action, children, className, contentCla
   return (
     <section
       className={cn(
+        "profile-settings-card",
         surface === "section"
           ? "profile-settings-section"
           : "rounded-lg border bg-card shadow-[0_1px_2px_rgba(15,23,42,0.04)]",
@@ -866,7 +876,7 @@ function SettingsCard({ title, subtitle, action, children, className, contentCla
         </div>
         {action && <div className="w-full shrink-0 sm:w-auto sm:justify-end [&>a]:w-full [&>button]:w-full sm:[&>a]:w-auto sm:[&>button]:w-auto">{action}</div>}
       </div>
-      <div className={cn("px-5 pb-2.5 sm:px-6", contentClassName)}>{children}</div>
+      {React.Children.toArray(children).length > 0 && <div className={cn("px-5 pb-2.5 sm:px-6", contentClassName)}>{children}</div>}
     </section>
   )
 }
@@ -884,7 +894,7 @@ function ProfileQueryFailure({ errors, onRetry }: { errors: Error[]; onRetry: ()
   )
 }
 
-function AccountTabSection({ user, profile, stats, showStats, displayMode, onDisplayModeChange, selectedMailbox, mailboxes, onOpenCleanup }: { user: AccountSettingsSectionProps["user"]; profile: AccountSettingsSectionProps["profile"]; stats?: MailStats; showStats: boolean; displayMode: DisplayMode; onDisplayModeChange: (mode: DisplayMode) => void; selectedMailbox?: Mailbox; mailboxes: Mailbox[]; onOpenCleanup: () => void }) {
+function AccountTabSection({ user, profile, stats, showStats, selectedMailbox, mailboxes, onOpenCleanup }: { user: AccountSettingsSectionProps["user"]; profile: AccountSettingsSectionProps["profile"]; stats?: MailStats; showStats: boolean; selectedMailbox?: Mailbox; mailboxes: Mailbox[]; onOpenCleanup: () => void }) {
   const accountName = user.email
   const quotaBytes = stats?.quotaBytes || (selectedMailbox?.quotaMb ? selectedMailbox.quotaMb * 1024 * 1024 : 0)
   const storageBytes = stats?.storageBytes || 0
@@ -896,28 +906,12 @@ function AccountTabSection({ user, profile, stats, showStats, displayMode, onDis
           <InfoLine label="主登录邮箱" value={accountName} />
           <div className="grid gap-2 sm:grid-cols-[10rem_minmax(0,1fr)] sm:items-center">
             <Label htmlFor="profile-display-name" className="text-base font-normal text-muted-foreground">显示名称</Label>
-            <div className="flex flex-col gap-2 sm:ml-auto sm:w-[320px] sm:flex-row">
+            <div className="flex min-w-0 gap-2 sm:ml-auto sm:w-[320px] [&>input]:min-w-0">
               <Input id="profile-display-name" name="displayName" defaultValue={user.displayName} maxLength={80} required className="h-9" />
               <Button type="submit" size="sm" disabled={profile.isPending}>{profile.isPending ? "保存中..." : "保存"}</Button>
             </div>
           </div>
         </form>
-      </SettingsCard>
-
-      <SettingsCard title="邮件列表显示" surface="section">
-        <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1" role="group" aria-label="邮件列表显示模式">
-          {(["detailed", "compact"] as DisplayMode[]).map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              className={cn("h-9 rounded-md px-3 text-sm font-medium transition-colors", displayMode === mode ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
-              aria-pressed={displayMode === mode}
-              onClick={() => onDisplayModeChange(mode)}
-            >
-              {mode === "detailed" ? "标准布局" : "紧凑布局"}
-            </button>
-          ))}
-        </div>
       </SettingsCard>
 
       {showStats && <SettingsCard title="存储容量" surface="section" action={<Button type="button" variant="outline" size="sm" onClick={onOpenCleanup}>邮件清理</Button>}>
@@ -946,7 +940,7 @@ function AccountTabSection({ user, profile, stats, showStats, displayMode, onDis
 
 function InfoLine({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="grid gap-2 sm:grid-cols-[10rem_minmax(0,1fr)] sm:items-center">
+    <div className="profile-info-line grid gap-2 sm:grid-cols-[10rem_minmax(0,1fr)] sm:items-center">
       <div className="text-base text-muted-foreground">{label}</div>
       <div className="min-w-0 truncate text-base font-semibold sm:text-right">{value}</div>
     </div>
@@ -955,7 +949,7 @@ function InfoLine({ label, value }: { label: string; value: React.ReactNode }) {
 
 function QuotaBox({ title, lines, highlight, className }: { title: string; lines: string[]; highlight?: string; className?: string }) {
   return (
-    <div className={cn("rounded-lg border p-3", className)}>
+    <div className={cn("profile-quota-item rounded-lg border p-3", className)}>
       <div className="mb-2 flex items-center gap-2">
         <div className="text-base font-semibold">{title}</div>
         {highlight && <Badge variant="secondary" className="text-[10px]">{highlight}</Badge>}
@@ -1003,6 +997,8 @@ function MailPreferencesSection({
   const [signatureDefault, setSignatureDefault] = React.useState(false)
   const [editingSignature, setEditingSignature] = React.useState<MailSignature | null>(null)
   const [pendingConfirm, setPendingConfirm] = React.useState<PendingConfirm | null>(null)
+  const isMobile = useIsMobile()
+  const [creatingSignature, setCreatingSignature] = React.useState(false)
 
   function submitLabel(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -1025,6 +1021,16 @@ function MailPreferencesSection({
     setSignatureDefault(false)
   }
 
+  const signatureForm = <form className="signature-create-form space-y-3 rounded-lg border p-4" onSubmit={submitSignature}>
+    <div className="grid gap-3 md:grid-cols-2">
+      <Field label="签名名称"><Input name="name" required placeholder="例如：默认签名" /></Field>
+      <Field label="绑定邮箱"><MailboxSelect value={signatureMailboxId} mailboxes={mailboxes} onChange={setSignatureMailboxId} /></Field>
+    </div>
+    <Field label="签名内容"><Textarea name="content" required className="min-h-[138px]" placeholder="签名内容" /></Field>
+    <label className="flex min-h-11 items-center gap-3 text-sm"><Checkbox checked={signatureDefault} onCheckedChange={(checked) => setSignatureDefault(checked === true)} />设为默认签名</label>
+    <Button disabled={signaturesPending}>{signaturesPending ? "保存中..." : "创建签名"}</Button>
+  </form>
+
   return (
     <div className="space-y-6">
       <SettingsCard title="标签管理">
@@ -1035,7 +1041,7 @@ function MailPreferencesSection({
         </form>
         <div className="mt-4 flex flex-wrap gap-2">
           {labels.map((label) => (
-            <span key={label.id} className="inline-flex h-8 items-center gap-2 rounded-full border px-3 text-sm">
+            <span key={label.id} className="profile-label-chip inline-flex min-h-8 items-center gap-2 rounded-full border px-3 text-sm">
               <span className="size-3 rounded-full" style={{ backgroundColor: label.color || "#64748b" }} />
               {label.name}
               <Button type="button" variant="ghost" size="icon" className="h-5 w-5 p-0 text-muted-foreground shadow-none hover:text-destructive" disabled={labelsPending} onClick={() => onDeleteLabel(label.id)} aria-label={`删除标签 ${label.name}`}>
@@ -1047,21 +1053,8 @@ function MailPreferencesSection({
         </div>
       </SettingsCard>
 
-      <SettingsCard title="签名管理" subtitle="支持全局签名和按发件邮箱绑定的默认签名。" action={<span className="pt-1 text-sm text-muted-foreground">共 {signatures.length} 个签名</span>}>
-        <form className="rounded-lg border p-4" onSubmit={submitSignature}>
-          <div className="grid gap-3 md:grid-cols-2">
-            <Field label="签名名称"><Input name="name" className="h-10" required placeholder="例如：默认签名" /></Field>
-            <Field label="绑定邮箱"><MailboxSelect value={signatureMailboxId} mailboxes={mailboxes} onChange={setSignatureMailboxId} /></Field>
-          </div>
-          <Field label="签名内容">
-            <Textarea name="content" required className="min-h-[138px] text-base" placeholder="支持多行文本，写信时会自动转换为 HTML" />
-          </Field>
-          <label className="mb-4 mt-4 flex items-center gap-2 text-sm">
-            <Checkbox checked={signatureDefault} onCheckedChange={(checked) => setSignatureDefault(checked === true)} />
-            设为默认签名
-          </label>
-          <Button disabled={signaturesPending}>{signaturesPending ? "保存中..." : "创建签名"}</Button>
-        </form>
+      <SettingsCard title="签名管理" subtitle={`共 ${signatures.length} 个签名`} action={isMobile ? <Button type="button" variant="ghost" size="sm" onClick={() => setCreatingSignature(true)}><Plus className="size-4" />新建签名</Button> : undefined}>
+        {!isMobile && signatureForm}
         <div className="mt-4 space-y-3">
           {signatures.map((item) => {
             const mailbox = item.mailboxId ? mailboxes.find((m) => m.id === item.mailboxId)?.address || "未知邮箱" : "全局签名"
@@ -1088,6 +1081,8 @@ function MailPreferencesSection({
           {!signaturesLoading && signatures.length === 0 && <div className="py-5 text-center text-sm text-muted-foreground">暂无签名</div>}
         </div>
       </SettingsCard>
+
+      {isMobile && <Dialog open={creatingSignature} onOpenChange={setCreatingSignature}><DialogContent><DialogHeader><DialogTitle>新建签名</DialogTitle></DialogHeader>{signatureForm}</DialogContent></Dialog>}
 
       <Dialog open={!!editingSignature} onOpenChange={(open) => { if (!open) setEditingSignature(null) }}>
         <DialogContent className="max-h-[92dvh] overflow-y-auto sm:max-w-2xl">
@@ -1132,26 +1127,30 @@ function EditSignatureForm({ item, mailboxes, pending, onCancel, onSubmit }: { i
 }
 
 function SecuritySettingsSection({ user, password, passwordFormRef, twoFactorFormRef, setupTwoFactor, enableTwoFactor, disableTwoFactor, recoveryCodes, onCopy }: { user: AccountSettingsSectionProps["user"]; password: AccountSettingsSectionProps["password"]; passwordFormRef: React.RefObject<HTMLFormElement>; twoFactorFormRef: React.RefObject<HTMLFormElement>; setupTwoFactor: AccountSettingsSectionProps["setupTwoFactor"]; enableTwoFactor: AccountSettingsSectionProps["enableTwoFactor"]; disableTwoFactor: AccountSettingsSectionProps["disableTwoFactor"]; recoveryCodes: string[]; onCopy: (text: string) => void }) {
+  const isMobile = useIsMobile()
+  const [editingPassword, setEditingPassword] = React.useState(false)
+  const passwordFields = <form ref={passwordFormRef} className="w-full max-w-[560px] space-y-3" onSubmit={(e) => { e.preventDefault(); password.mutate(new FormData(e.currentTarget)) }}>
+    <Field label="当前密码"><PasswordInput name="currentPassword" autoComplete="current-password" required /></Field>
+    <Field label="新密码"><PasswordInput name="newPassword" autoComplete="new-password" minLength={6} required placeholder="输入新密码" /></Field>
+    <Field label="确认新密码"><PasswordInput name="confirmPassword" autoComplete="new-password" minLength={6} required placeholder="再次输入密码" /></Field>
+    <Button disabled={password.isPending}>{password.isPending ? "设置中..." : "设置密码"}</Button>
+  </form>
   return (
     <div className="space-y-6">
       <SettingsCard title="当前登录" contentClassName="border-t py-5">
         <div className="flex items-center gap-4">
           <div className="flex size-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"><ShieldCheck className="h-5 w-5" /></div>
-          <div>
-            <div className="font-semibold">{user.email}</div>
+          <div className="min-w-0">
+            <div className="break-all font-semibold">{user.email}</div>
             <div className="text-sm text-muted-foreground">当前已登录账号</div>
           </div>
         </div>
       </SettingsCard>
 
-      <SettingsCard title="密码管理">
-        <form ref={passwordFormRef} className="w-full max-w-[560px] space-y-3" onSubmit={(e) => { e.preventDefault(); password.mutate(new FormData(e.currentTarget)) }}>
-          <Field label="当前密码"><PasswordInput name="currentPassword" required /></Field>
-          <Field label="新密码"><PasswordInput name="newPassword" minLength={6} required placeholder="输入新密码" /></Field>
-          <Field label="确认新密码"><PasswordInput name="confirmPassword" minLength={6} required placeholder="再次输入密码" /></Field>
-          <Button disabled={password.isPending}>{password.isPending ? "设置中..." : "设置密码"}</Button>
-        </form>
+      <SettingsCard title="密码管理" action={isMobile ? <Button type="button" variant="ghost" onClick={() => setEditingPassword(true)}>修改密码</Button> : undefined}>
+        {!isMobile && passwordFields}
       </SettingsCard>
+      {isMobile && <Dialog open={editingPassword} onOpenChange={setEditingPassword}><DialogContent><DialogHeader><DialogTitle>修改密码</DialogTitle></DialogHeader>{passwordFields}</DialogContent></Dialog>}
 
       <SettingsCard title="两步验证">
         <div className="mb-4 flex items-center justify-between rounded-lg border p-3">
@@ -3155,24 +3154,30 @@ function ApiTokensSection({ items, loading, pending, allowSubNest, onCreate, onU
 
 function ContactsSection({ items, loading, onCreate, onDelete, onCopy, pending }: { items: { id: string; name: string; email: string; note: string }[]; loading: boolean; onCreate: (form: FormData) => void; onDelete: (id: string) => void; onCopy: (text: string) => void; pending: boolean }) {
   const [pendingConfirm, setPendingConfirm] = React.useState<PendingConfirm | null>(null)
+  const isMobile = useIsMobile()
+  const [creating, setCreating] = React.useState(false)
+  const [query, setQuery] = React.useState("")
+  const filtered = items.filter((item) => `${item.name} ${item.email} ${item.note}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase()))
+  const createForm = <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); onCreate(new FormData(e.currentTarget)); e.currentTarget.reset() }}>
+    <Field label="姓名"><Input name="name" autoComplete="name" placeholder="姓名" /></Field>
+    <Field label="邮箱"><Input name="email" autoComplete="email" type="email" required /></Field>
+    <Field label="备注"><Input name="note" /></Field>
+    <Button className="w-full" disabled={pending}>{pending ? "保存中..." : "保存联系人"}</Button>
+  </form>
   return (
     <div className="grid gap-6 lg:grid-cols-[380px_minmax(0,1fr)]">
-      <Card>
+      {!isMobile && <Card>
         <CardHeader><CardTitle>新增联系人</CardTitle></CardHeader>
         <CardContent>
-          <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); onCreate(new FormData(e.currentTarget)); e.currentTarget.reset() }}>
-            <Field label="姓名"><Input name="name" placeholder="张三" /></Field>
-            <Field label="邮箱"><Input name="email" type="email" required /></Field>
-            <Field label="备注"><Input name="note" /></Field>
-            <Button className="w-full" disabled={pending}>{pending ? "保存中..." : "保存联系人"}</Button>
-          </form>
+          {createForm}
         </CardContent>
-      </Card>
+      </Card>}
+      {isMobile && <div className="flex min-w-0 gap-2"><Input type="search" aria-label="搜索联系人" placeholder="搜索姓名或邮箱" value={query} onChange={(event) => setQuery(event.target.value)} /><Button type="button" onClick={() => setCreating(true)}><Plus className="size-4" />新增</Button></div>}
       <Card>
-        <CardHeader><CardTitle>联系人列表</CardTitle></CardHeader>
+        <CardHeader><CardTitle>联系人列表 <span className="text-sm font-normal text-muted-foreground">{filtered.length}</span></CardTitle></CardHeader>
         <CardContent className="space-y-2">
-          {items.map((item) => (
-            <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg border p-3">
+          {filtered.map((item) => (
+            <div key={item.id} className="profile-contact-row flex items-center justify-between gap-3 rounded-lg border p-3">
               <div className="min-w-0">
                 <div className="truncate text-sm font-medium">{item.name}</div>
                 <div className="truncate text-xs text-muted-foreground">{item.email}{item.note ? ` · ${item.note}` : ""}</div>
@@ -3184,8 +3189,10 @@ function ContactsSection({ items, loading, onCreate, onDelete, onCopy, pending }
             </div>
           ))}
           {!loading && items.length === 0 && <EmptyState text="暂无联系人" />}
+          {!loading && items.length > 0 && filtered.length === 0 && <EmptyState text="没有匹配的联系人" />}
         </CardContent>
       </Card>
+      {isMobile && <Dialog open={creating} onOpenChange={setCreating}><DialogContent><DialogHeader><DialogTitle>新增联系人</DialogTitle></DialogHeader>{createForm}</DialogContent></Dialog>}
       <ConfirmDialog open={!!pendingConfirm} title={pendingConfirm?.title || ""} description={pendingConfirm?.description} confirmText={pendingConfirm?.confirmText || "删除"} destructive onOpenChange={(open) => { if (!open) setPendingConfirm(null) }} onConfirm={() => pendingConfirm?.onConfirm()} />
     </div>
   )
@@ -3619,7 +3626,7 @@ function StatsSection({ stats }: { stats?: MailStats }) {
   ]
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="profile-primary-stats grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {primaryCards.map((card) => (
           <div key={card.label} className="grid h-[106px] grid-cols-[2.5rem_minmax(0,1fr)] items-center gap-3 rounded-lg border bg-card px-5">
             <div className={cn("flex size-10 shrink-0 items-center justify-center rounded-lg", card.tone)}>{card.icon}</div>
@@ -3631,7 +3638,7 @@ function StatsSection({ stats }: { stats?: MailStats }) {
           </div>
         ))}
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="profile-secondary-stats grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {secondaryStats.map((item) => (
           <div key={item.label} className="flex h-[54px] items-center justify-between gap-3 rounded-lg border bg-background px-4 text-sm">
             <div className="truncate text-sm text-muted-foreground">{item.label}</div>
@@ -3661,7 +3668,7 @@ function StatsSection({ stats }: { stats?: MailStats }) {
 
 function StatsPanel({ title, children, className }: { title: string; children: React.ReactNode; className?: string }) {
   return (
-    <section className={cn("overflow-hidden rounded-lg border bg-card", className)}>
+    <section className={cn("profile-stats-panel overflow-hidden rounded-lg border bg-card", className)}>
       <div className="px-5 pb-2 pt-4">
         <h2 className="text-base font-semibold leading-6 text-foreground">{title}</h2>
       </div>
@@ -3683,7 +3690,7 @@ function StatsTrendChart({ points }: { points: MailStats["trend"] }) {
   const pathFor = (key: "incoming" | "outgoing") => data.map((item, index) => `${index === 0 ? "M" : "L"} ${xFor(index).toFixed(1)} ${yFor(item[key]).toFixed(1)}`).join(" ")
   const ticks = trendTicks(data)
   return (
-    <div className="h-[250px] rounded-md bg-background">
+    <div className="profile-trend-chart h-[250px] rounded-md bg-background">
       <div className="flex items-center justify-end gap-4 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1.5"><span className="size-2 rounded-full bg-foreground" />收件</span>
         <span className="inline-flex items-center gap-1.5"><span className="size-2 rounded-full bg-emerald-500" />发件</span>
@@ -3703,8 +3710,8 @@ function StatsTrendChart({ points }: { points: MailStats["trend"] }) {
         ))}
         <text x="0" y={padding.top + 4} className="fill-muted-foreground text-[11px]">{maxValue}</text>
         <text x="0" y={padding.top + plotHeight + 4} className="fill-muted-foreground text-[11px]">0</text>
-        {ticks.map((tick) => (
-          <text key={`${tick.index}-${tick.label}`} x={xFor(tick.index)} y={height - 6} textAnchor="middle" className="fill-muted-foreground text-[11px]">{tick.label}</text>
+        {ticks.map((tick, index) => (
+          <text key={`${tick.index}-${tick.label}`} x={xFor(tick.index)} y={height - 6} textAnchor={ticks.length === 1 ? "middle" : index === 0 ? "start" : index === ticks.length - 1 ? "end" : "middle"} className="fill-muted-foreground text-[11px]">{tick.label}</text>
         ))}
       </svg>
     </div>
@@ -3767,7 +3774,7 @@ function distributionBarTone(key: string) {
 
 function StatsStorage({ quotaLabel, quotaPct, hasQuota }: { quotaLabel: string; quotaPct: number; hasQuota: boolean }) {
   return (
-    <div className="h-[260px] pt-3">
+    <div className="profile-storage-summary h-[260px] pt-3">
       <div className="mb-2 flex items-end justify-between gap-3">
         <div className="text-sm font-semibold text-foreground">{quotaLabel}</div>
         <div className="text-xs font-semibold text-foreground">{hasQuota ? `${quotaPct.toFixed(0)}%` : "不限"}</div>
@@ -3783,7 +3790,7 @@ function StatsStorage({ quotaLabel, quotaPct, hasQuota }: { quotaLabel: string; 
 function StatsContacts({ contacts }: { contacts: MailStats["topContacts"] }) {
   if (contacts.length === 0) return <EmptyState icon={<Users />} text="暂无常用联系人" description="有邮件往来后会显示联系人排行" className="h-[260px] min-h-0 py-4" />
   return (
-    <div className="h-[260px] space-y-1 overflow-hidden pt-1">
+    <div className="profile-top-contacts h-[260px] space-y-1 overflow-hidden pt-1">
       {contacts.slice(0, 10).map((item, index) => (
         <div key={item.email} className="grid grid-cols-[1.25rem_minmax(0,1fr)_3.25rem] items-center gap-2 text-sm leading-6">
           <div className="text-center font-semibold text-muted-foreground">{index + 1}</div>
@@ -3805,7 +3812,7 @@ function StatsSummary({ stats }: { stats?: MailStats }) {
     { label: stats?.quotaBytes ? `容量 ${Math.min(stats.quotaUsedPct || 0, 999).toFixed(1)}%` : "容量", value: quotaLabel, icon: <BarChart3 className="h-4 w-4" />, tone: "bg-slate-100 text-slate-700" },
   ]
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+    <div className="profile-summary-grid grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       {cards.map((card) => (
         <Card key={card.label} className="min-w-0 overflow-hidden shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
           <CardContent className="flex min-w-0 items-center gap-3 p-4">
@@ -3821,12 +3828,17 @@ function StatsSummary({ stats }: { stats?: MailStats }) {
   )
 }
 
-function CleanupButton({ icon, title, disabled, onClick }: { icon: React.ReactNode; title: string; disabled: boolean; onClick: () => void }) { return <Button variant="outline" className="min-h-[72px] w-full min-w-0 justify-start whitespace-normal px-4 py-3 text-left" disabled={disabled} onClick={onClick}><div className="mr-3 shrink-0 rounded-md bg-muted p-2">{icon}</div><div className="min-w-0 break-words font-medium leading-5">{title}</div></Button> }
-function MailboxSelect({ value, mailboxes, onChange }: { value: string; mailboxes: Mailbox[]; onChange: (value: string) => void }) { return <Select value={value} onValueChange={onChange}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">全部邮箱</SelectItem>{mailboxes.map((m) => <SelectItem key={m.id} value={m.id}>{m.address}</SelectItem>)}</SelectContent></Select> }
-function Field({ label, children }: { label: string; children: React.ReactNode }) { return <div className="space-y-2"><Label>{label}</Label>{children}</div> }
+function CleanupButton({ icon, title, disabled, onClick }: { icon: React.ReactNode; title: string; disabled: boolean; onClick: () => void }) { return <Button variant="outline" className="profile-cleanup-action min-h-[72px] w-full min-w-0 justify-start whitespace-normal px-4 py-3 text-left" disabled={disabled} onClick={onClick}><div className="mr-3 shrink-0 rounded-md bg-muted p-2">{icon}</div><div className="min-w-0 break-words font-medium leading-5">{title}</div></Button> }
+function MailboxSelect({ value, mailboxes, onChange, id }: { value: string; mailboxes: Mailbox[]; onChange: (value: string) => void; id?: string }) { return <Select value={value} onValueChange={onChange}><SelectTrigger id={id}><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">全部邮箱</SelectItem>{mailboxes.map((m) => <SelectItem key={m.id} value={m.id}>{m.address}</SelectItem>)}</SelectContent></Select> }
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  const id = React.useId()
+  const control = React.isValidElement<{ id?: string }>(children) ? children : null
+  const controlId = control?.props.id || id
+  return <div className="profile-field space-y-2" role="group" aria-labelledby={`${id}-label`}><Label id={`${id}-label`} htmlFor={controlId}>{label}</Label>{control ? React.cloneElement(control, { id: controlId }) : children}</div>
+}
 function EmptyState({ text, description, icon, action, className }: { text: string; description?: string; icon?: React.ReactNode; action?: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("grid min-h-[132px] place-items-center rounded-lg border border-dashed bg-background/60 px-6 py-8 text-center", className)}>
+    <div className={cn("profile-empty-state grid min-h-[132px] place-items-center rounded-lg border border-dashed bg-background/60 px-6 py-8 text-center", className)}>
       <div className="flex max-w-sm flex-col items-center">
         {icon && <div className="mb-3 text-muted-foreground/70 [&>svg]:h-9 [&>svg]:w-9 [&>svg]:stroke-[1.5]">{icon}</div>}
         <div className="text-sm font-medium text-muted-foreground">{text}</div>
