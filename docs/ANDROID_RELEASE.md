@@ -99,3 +99,19 @@ under the same application identity. Never regenerate it for a routine release.
 - The backend preview service is a candidate override layered over the previous
   FCM candidate. Roll back by starting the base compose plus the previous push
   override without the preview override; do not restore an older mailbox database.
+
+## 0.2.3 Mailbox Notification Layout
+
+- Version code `7`, same release signing certificate. Notifications put the
+  receiving mailbox address above the subject, without a fixed click-to-view line.
+- The authenticated preview endpoint adds `mailboxAddress`; existing clients may
+  ignore it. The exact registered session and mailbox ownership are still required.
+- Native tests cover the two-line mapping, empty subjects, older servers, generic
+  fallback, control characters and Unicode-safe truncation. All nine native tests
+  and the release build passed. Backend push tests passed, including ownership,
+  expiry and inactive mailbox checks. No real outgoing email was sent for tests.
+- Public lock-screen content remains generic. Physical-phone rendering needs
+  confirmation with a real incoming message after upgrading.
+- Server candidate `fcm-account-20261015` is layered over the preview candidate.
+  To roll back, omit `compose.account.yml` and keep the base, push and preview
+  overrides; retain current mailbox data rather than restoring an older database.

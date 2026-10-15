@@ -14,12 +14,12 @@ final class NativeMailNotifications {
     static volatile boolean foreground;
     static final String CHANNEL = "incoming-mail";
 
-    static synchronized void showEvent(Context context, String eventID, String subject) {
+    static synchronized void showEvent(Context context, String eventID, String subject, String mailboxAddress) {
         if (!allowed(context)) return;
         android.content.SharedPreferences state = context.getSharedPreferences("mail-push", Context.MODE_PRIVATE);
         java.util.Set<String> seen = new java.util.HashSet<>(state.getStringSet("seen-events", java.util.Collections.emptySet()));
         if (seen.contains(eventID)) return;
-        show(context, subject);
+        show(context, subject, mailboxAddress);
         if (seen.size() >= 256) seen.clear();
         seen.add(eventID);
         state.edit().putStringSet("seen-events", seen).apply();
@@ -49,18 +49,22 @@ final class NativeMailNotifications {
     }
 
     static void show(Context context, String subject) {
+        show(context, subject, "");
+    }
+
+    static void show(Context context, String subject, String mailboxAddress) {
         channel(context);
         if (!allowed(context)) return;
         Intent intent = new Intent(context, MainActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent open = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         Notification.Builder builder = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(context, CHANNEL) : new Notification.Builder(context);
-        String title = subject == null ? "" : subject.replaceAll("[\\p{Cntrl}\\u202a-\\u202e\\u2066-\\u2069]", " ").trim();
-        if (title.length() > 160) title = title.substring(0, 160);
+        String title = NotificationText.clean(subject, 160);
+        String account = NotificationText.clean(mailboxAddress, 254);
         Notification.Builder hidden = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(context, CHANNEL) : new Notification.Builder(context);
         hidden.setSmallIcon(R.drawable.ic_mail_notification).setContentTitle("NewSzxcn").setContentText("收到新邮件");
-        builder.setSmallIcon(R.drawable.ic_mail_notification).setContentTitle(title.isEmpty() ? "NewSzxcn" : title)
-            .setContentText("收到新邮件，点击查看").setVisibility(Notification.VISIBILITY_PRIVATE)
+        builder.setSmallIcon(R.drawable.ic_mail_notification).setContentTitle(NotificationText.title(account, title))
+            .setContentText(NotificationText.body(account, title)).setVisibility(Notification.VISIBILITY_PRIVATE)
             .setPublicVersion(hidden.build()).setContentIntent(open).setAutoCancel(true);
         try { context.getSystemService(NotificationManager.class).notify(1001, builder.build()); }
         catch (SecurityException ignored) { /* Permission may be revoked between check and notify. */ }

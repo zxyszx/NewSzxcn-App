@@ -17,9 +17,9 @@ public class MailMessagingService extends FirebaseMessagingService {
         String eventID = message.getData().get("event_id");
         if (!PushMessagePolicy.accepts(message.getData().get("type"), eventID, message.getData().get("binding_id"),
             getSharedPreferences("mail-push", MODE_PRIVATE).getString("binding", ""))) return;
-        String subject = PushPreview.subject(this, eventID);
+        PushPreview preview = PushPreview.fetch(this, eventID);
         if (!NativeMailNotifications.active(this) || NativeMailNotifications.foreground || !PushMessagePolicy.accepts(message.getData().get("type"), eventID, message.getData().get("binding_id"),
             getSharedPreferences("mail-push", MODE_PRIVATE).getString("binding", ""))) return;
-        NativeMailNotifications.showEvent(this, eventID, subject);
+        NativeMailNotifications.showEvent(this, eventID, preview.subject, preview.mailboxAddress);
     }
 }
