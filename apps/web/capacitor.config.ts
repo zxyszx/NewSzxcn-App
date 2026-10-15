@@ -8,7 +8,7 @@ const config: CapacitorConfig = {
   webDir: "dist-mobile",
   server: { cleartext: false, hostname: liveMail ? "mail.newszxcn.com" : "localhost", androidScheme: "https" },
   loggingBehavior: liveMail ? "none" : "debug",
-  android: { zoomEnabled: true, webContentsDebuggingEnabled: !liveMail || process.env.NEWSZXCN_WEBVIEW_DEBUG === "true" },
+  android: { zoomEnabled: false, webContentsDebuggingEnabled: !liveMail || process.env.NEWSZXCN_WEBVIEW_DEBUG === "true" },
   plugins: { LiveMail: { enabled: liveMail } },
 }
 

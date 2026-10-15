@@ -1,5 +1,5 @@
 import * as React from "react"
-import { hasNativeNotifications, enableNativeNotifications, showNativeIncomingMail, refreshNativePushRegistration } from "@/lib/native-notifications"
+import { hasNativeNotifications, enableNativeNotifications, refreshNativePushRegistration, setNativeReadingZoom } from "@/lib/native-notifications"
 import DOMPurify from "dompurify"
 import { type InfiniteData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Node, mergeAttributes, type Editor } from "@tiptap/core"
@@ -455,6 +455,32 @@ export function MailPage() {
   }, [])
 
   React.useEffect(() => {
+    const onNativeBack = (event: Event) => {
+      if (document.querySelector('[role="dialog"], [role="alertdialog"], [role="menu"], .anchored-popover, .account-overlay')) {
+        event.preventDefault()
+        document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true }))
+      } else if (selectedId) {
+        event.preventDefault()
+        setSelectedId(null)
+      } else if (compactSelectedIds.length > 0) {
+        event.preventDefault()
+        setCompactSelectedIds([])
+      } else if (mailView !== "folder" || folder !== "Inbox") {
+        event.preventDefault()
+        openFolder("Inbox")
+      }
+    }
+    window.addEventListener("newszxcn:native-back", onNativeBack)
+    return () => window.removeEventListener("newszxcn:native-back", onNativeBack)
+  }, [selectedId, compactSelectedIds.length, mailView, folder])
+
+  React.useEffect(() => {
+    if (!hasNativeNotifications()) return
+    void setNativeReadingZoom(!!selectedId && !composeOpen).catch(() => undefined)
+    return () => { void setNativeReadingZoom(false).catch(() => undefined) }
+  }, [selectedId, composeOpen])
+
+  React.useEffect(() => {
     const currentState = window.history.state as Record<string, unknown> | null
     const isReaderEntry = currentState?.newszxcnMailReader === true
 
@@ -814,7 +840,7 @@ export function MailPage() {
       setFolder("Inbox")
       setSelectedId(first.id)
     }
-    toast({
+    if (!hasNativeNotifications()) toast({
       title,
       description,
       onClick: openFirstMessage,
@@ -827,10 +853,8 @@ export function MailPage() {
       role: "button",
       tabIndex: 0,
     })
-    playIncomingMailSound(mailAudioContextRef)
-    if (!isDemoMode && hasNativeNotifications()) {
-      void showNativeIncomingMail().catch(() => undefined)
-    } else if ("Notification" in window && Notification.permission === "granted") {
+    if (!hasNativeNotifications()) playIncomingMailSound(mailAudioContextRef)
+    if (!hasNativeNotifications() && "Notification" in window && Notification.permission === "granted") {
       const notification = new Notification(title, {
         body: description,
         tag: `lanqin-mail-${activeMailboxId}`,
@@ -2219,7 +2243,8 @@ export function MailPage() {
                   </SheetContent>
                 </Sheet>
                 <div className="min-w-0 flex-1 text-sm font-semibold">{mailView === "label" && selectedLabel ? <Badge variant="outline" className="gap-1.5 rounded-md font-normal"><span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: labelDotColor(selectedLabel) }} />{selectedLabel.name}</Badge> : viewTitle}</div>
-                {mailTransferTools}
+                {mailTransferActions}
+                {!compactMailLayout && mailRefreshTool}
                   {canSendMail && <Button type="button" size="icon" onClick={() => openCompose()} disabled={!selectedComposeMailbox} aria-label="写邮件"><PencilLine className="h-4 w-4" /></Button>}
               </header>
             )}

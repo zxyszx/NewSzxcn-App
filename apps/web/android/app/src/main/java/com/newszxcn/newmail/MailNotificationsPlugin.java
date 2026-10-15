@@ -51,7 +51,7 @@ public class MailNotificationsPlugin extends Plugin {
 
     @PluginMethod public void showIncoming(PluginCall call) {
         if (!allowed()) { permissionResult(call); return; }
-        NativeMailNotifications.show(getContext());
+        NativeMailNotifications.show(getContext(), call.getString("subject", ""));
         call.resolve();
     }
 
@@ -68,6 +68,21 @@ public class MailNotificationsPlugin extends Plugin {
     @PluginMethod public void refreshRegistration(PluginCall call) {
         NativePushRegistration.sync(getContext());
         call.resolve();
+    }
+
+    @PluginMethod public void setReadingZoom(PluginCall call) {
+        boolean enabled = Boolean.TRUE.equals(call.getBoolean("enabled", false));
+        getActivity().runOnUiThread(() -> {
+            android.webkit.WebView view = getBridge().getWebView();
+            if (!enabled) {
+                float density = getContext().getResources().getDisplayMetrics().density;
+                float scale = view.getScale() / density;
+                if (scale > 1.01f) view.zoomBy(1f / scale);
+            }
+            view.getSettings().setBuiltInZoomControls(enabled);
+            view.getSettings().setDisplayZoomControls(false);
+            call.resolve();
+        });
     }
 
     @PluginMethod public void status(PluginCall call) {

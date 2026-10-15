@@ -67,9 +67,35 @@ under the same application identity. Never regenerate it for a routine release.
   700 and 1440 CSS pixels; no dates outside the viewport or document overflow.
 - Both list renderers now use the existing date grouping (today, yesterday,
   this week, this month, older). Group-label checks passed.
-- Native `android.zoomEnabled` is true, without disabling viewport scaling;
+- In `0.2.1`, native `android.zoomEnabled` was true, without disabling viewport scaling;
   the final live APK retains debugging disabled. Physical pinch gestures still
   need confirmation on the user's phone.
 - Release build and all 6 native unit tests passed. Signed APK installation and
   startup were checked on a temporary read-only emulator, preserving the
   authenticated test environment.
+
+## 0.2.2 Interaction And Notification Checks
+
+- Version code `6`, retaining the release signing certificate for updates.
+- Native shell zoom is off for lists and forms; reading a message enables zoom,
+  and leaving the reader resets it. Web viewport scaling remains available.
+- Compact layout has one refresh button. Browser checks at 360 CSS pixels covered
+  unread filtering, compose dismissal, draft navigation and Sent/Archive/Trash/
+  Starred/Spam filtering and return navigation. They used isolated demo data,
+  not real outgoing mail or production draft mutations.
+- Android back first dismisses overlays, then the reader or selection; folder
+  views return to Inbox before native history/exit handling.
+- Toasts are limited to one bottom entry lasting three seconds. Native foreground
+  incoming mail does not emit a second toast, sound or system notification.
+- FCM carries an opaque event ID. The App fetches the subject over fixed-origin
+  HTTPS using its existing session. The server enforces device-session and mailbox
+  ownership and does not mark the message read. Failed preview requests fall back
+  to generic notification text; lock-screen public text remains generic.
+- Backend tests include anonymous access, cross-session denial, logout revocation,
+  title sanitization, no-store caching and unchanged unread state. The full backend
+  suite and the six native release unit tests passed.
+- Physical-phone background delivery, title display and pinch gestures still
+  require acceptance after upgrading. Domestic push is not connected.
+- The backend preview service is a candidate override layered over the previous
+  FCM candidate. Roll back by starting the base compose plus the previous push
+  override without the preview override; do not restore an older mailbox database.

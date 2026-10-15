@@ -10,6 +10,8 @@ import android.webkit.WebView;
 import androidx.activity.OnBackPressedCallback;
 
 public class MainActivity extends BridgeActivity {
+    @Override public void onStart() { super.onStart(); NativeMailNotifications.foreground = true; }
+    @Override public void onStop() { NativeMailNotifications.foreground = false; super.onStop(); }
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(MailNotificationsPlugin.class);
@@ -18,8 +20,12 @@ public class MainActivity extends BridgeActivity {
         AttachmentDownloads downloads = new AttachmentDownloads(this);
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override public void handleOnBackPressed() {
-                if (bridge.getWebView().canGoBack()) bridge.getWebView().goBack();
-                else moveTaskToBack(true);
+                bridge.getWebView().evaluateJavascript(
+                    "(() => { if(document.querySelector('[role=dialog], [role=alertdialog], [role=menu], .anchored-popover, .account-overlay')) { document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true})); return false; } return window.dispatchEvent(new Event('newszxcn:native-back', {cancelable:true})); })()", result -> {
+                        if (!"true".equals(result)) return;
+                        if (bridge.getWebView().canGoBack()) bridge.getWebView().goBack();
+                        else moveTaskToBack(true);
+                    });
             }
         });
         CookieManager.getInstance().setAcceptCookie(true);
