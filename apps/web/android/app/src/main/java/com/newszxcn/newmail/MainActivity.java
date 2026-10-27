@@ -11,7 +11,12 @@ import androidx.activity.OnBackPressedCallback;
 
 public class MainActivity extends BridgeActivity {
     @Override public void onStart() { super.onStart(); NativeMailNotifications.foreground = true; }
-    @Override public void onStop() { NativeMailNotifications.foreground = false; super.onStop(); }
+    @Override public void onStop() {
+        NativeMailNotifications.foreground = false;
+        // Persist HttpOnly login and logout cookies before the process is reclaimed.
+        CookieManager.getInstance().flush();
+        super.onStop();
+    }
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(MailNotificationsPlugin.class);
