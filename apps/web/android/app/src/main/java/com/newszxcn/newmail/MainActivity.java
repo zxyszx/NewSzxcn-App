@@ -46,7 +46,7 @@ public class MainActivity extends BridgeActivity {
 
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                if (request.isForMainFrame() && LiveMailRouting.isRemoteApi(request.getUrl().toString())) {
+                if (request.isForMainFrame() && LiveMailRouting.isDownload(request.getUrl().toString())) {
                     downloads.download(request.getUrl().toString());
                     return true;
                 }

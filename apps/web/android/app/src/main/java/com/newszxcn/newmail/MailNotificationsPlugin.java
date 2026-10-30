@@ -17,6 +17,24 @@ import com.google.firebase.messaging.FirebaseMessaging;
     @Permission(alias = "notifications", strings = { Manifest.permission.POST_NOTIFICATIONS })
 })
 public class MailNotificationsPlugin extends Plugin {
+    @PluginMethod public void openExternal(PluginCall call) {
+        String url = call.getString("url", "");
+        android.net.Uri uri = android.net.Uri.parse(url);
+        String scheme = uri.getScheme();
+        if (!("https".equalsIgnoreCase(scheme) || "http".equalsIgnoreCase(scheme)
+                || "mailto".equalsIgnoreCase(scheme) || "tel".equalsIgnoreCase(scheme))) {
+            call.reject("Unsupported link");
+            return;
+        }
+        try {
+            android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_VIEW, uri);
+            intent.addCategory(android.content.Intent.CATEGORY_BROWSABLE);
+            getActivity().startActivity(intent);
+            call.resolve();
+        } catch (android.content.ActivityNotFoundException | SecurityException e) {
+            call.reject("No application can open this link");
+        }
+    }
     private NotificationManager manager() {
         return getContext().getSystemService(NotificationManager.class);
     }
