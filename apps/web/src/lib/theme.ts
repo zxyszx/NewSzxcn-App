@@ -1,3 +1,6 @@
+import { Capacitor, registerPlugin } from "@capacitor/core"
+
+const appAppearance = registerPlugin<{ setTheme(options: { dark: boolean }): Promise<void> }>("AppAppearance")
 const THEME_TRANSITION_MS = 180
 const THEME_KEY = "lanqin:theme"
 let themeTimer: number | undefined
@@ -27,6 +30,9 @@ export function applyTheme(dark: boolean, animated = false, persist = true) {
   const updateTheme = () => {
     root.classList.toggle("dark", dark)
     root.style.colorScheme = dark ? "dark" : "light"
+    if (Capacitor.getPlatform() === "android") {
+      void appAppearance.setTheme({ dark }).catch(() => { /* Older APKs have no appearance bridge. */ })
+    }
     if (persist) localStorage.setItem(THEME_KEY, dark ? "dark" : "light")
   }
 

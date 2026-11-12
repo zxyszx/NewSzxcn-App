@@ -779,7 +779,10 @@ export function MailPage() {
     setDarkMode(resolveThemeMode(themeMode))
     themeMountedRef.current = true
     if (themeMode !== "system") return
-    return subscribeToSystemTheme((nextDark) => setDarkMode(nextDark))
+    return subscribeToSystemTheme((nextDark) => {
+      setDarkMode(nextDark)
+      applyThemeMode("system", true)
+    })
   }, [themeMode])
 
   React.useEffect(() => {
