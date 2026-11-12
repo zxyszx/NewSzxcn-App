@@ -6,7 +6,6 @@ const MAIL_GLASS_KEY = "newszxcn-mail-glass-strength-v2"
 const ADMIN_GLASS_KEY = "newszxcn-admin-glass-strength-v2"
 
 export type AppearanceSettings = {
-  bottomNavStyle: "fixed" | "floating"
   wallpaperId: string
   accentColor: string
   mailGlassStrength: number
@@ -63,7 +62,7 @@ export function getAppearanceSettings(): AppearanceSettings {
   const accentColor = localStorage.getItem(ACCENT_KEY) || defaultMailTheme.accentColor
   const mailGlassStrength = storedPercentage(MAIL_GLASS_KEY, 100)
   const adminGlassStrength = storedPercentage(ADMIN_GLASS_KEY, 100)
-  return { wallpaperId, accentColor, mailGlassStrength, adminGlassStrength, bottomNavStyle: localStorage.getItem("newszxcn:bottom-nav") === "floating" ? "floating" : "fixed" }
+  return { wallpaperId, accentColor, mailGlassStrength, adminGlassStrength }
 }
 
 export function applyAppearanceSettings(settings = getAppearanceSettings()) {
@@ -74,7 +73,6 @@ export function applyAppearanceSettings(settings = getAppearanceSettings()) {
   const adminBlur = mix(4, 28, adminStrength)
   const accent = hexToHsl(settings.accentColor)
   const root = document.documentElement
-  root.dataset.bottomNav = settings.bottomNavStyle
   root.style.setProperty("--workspace-wallpaper-light", theme.light ? `url("${theme.light}")` : "none")
   root.style.setProperty("--workspace-wallpaper-dark", theme.dark ? `url("${theme.dark}")` : "none")
   root.style.setProperty("--workspace-wallpaper-position", theme.backgroundPosition)
@@ -119,7 +117,6 @@ export function applyAppearanceSettings(settings = getAppearanceSettings()) {
 }
 
 export function saveAppearanceSettings(settings: AppearanceSettings) {
-  localStorage.setItem("newszxcn:bottom-nav", settings.bottomNavStyle)
   localStorage.setItem(WALLPAPER_KEY, settings.wallpaperId)
   localStorage.setItem(ACCENT_KEY, settings.accentColor)
   localStorage.setItem(MAIL_GLASS_KEY, String(settings.mailGlassStrength))

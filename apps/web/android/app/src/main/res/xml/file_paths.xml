@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
-    <external-path name="my_images" path="." />
-    <cache-path name="my_cache_images" path="." />
+    <!-- Camera capture and Capacitor temporary assets only; no storage roots. -->
+    <external-files-path name="camera_images" path="Pictures/" />
+    <external-cache-path name="external_assets" path="capacitorassets/" />
+    <cache-path name="internal_assets" path="capacitorassets/" />
 </paths>

@@ -763,11 +763,6 @@ function AppearanceSettingsSection({ mode, onModeChange, displayMode, onDisplayM
         {(["detailed", "compact"] as DisplayMode[]).map((value) => <Button key={value} type="button" variant="ghost" aria-pressed={displayMode === value} onClick={() => onDisplayModeChange(value)}>{value === "detailed" ? "标准布局" : "紧凑布局"}</Button>)}
       </div>
       <div className="profile-continuous-panel">
-      <SettingsCard title="底部导航" subtitle="选择手机底栏的显示方式。" surface="section">
-        <div className="mail-density-segments" role="group" aria-label="底栏样式">
-          {(["fixed", "floating"] as const).map((style) => <Button key={style} variant="ghost" aria-pressed={appearance.bottomNavStyle === style} onClick={() => updateAppearance({ ...appearance, bottomNavStyle: style })}>{style === "fixed" ? "固定底栏" : "悬浮底栏"}</Button>)}
-        </div>
-      </SettingsCard>
       <SettingsCard title="显示模式" subtitle="控制邮箱与设置页面的明暗外观。" surface="section">
         <div className="appearance-segments" role="group" aria-label="显示模式">
           {([
@@ -784,7 +779,7 @@ function AppearanceSettingsSection({ mode, onModeChange, displayMode, onDisplayM
         </div>
       </SettingsCard>
 
-      <SettingsCard title="背景图" subtitle="应用于邮箱和设置页面，浅色与深色模式自动使用对应图片。" surface="section">
+      {mailThemes.length > 0 && <SettingsCard title="背景图" subtitle="应用于邮箱和设置页面，浅色与深色模式自动使用对应图片。" surface="section">
         <div className="theme-gallery">
           {mailThemes.map((theme) => (
             <Button
@@ -802,7 +797,7 @@ function AppearanceSettingsSection({ mode, onModeChange, displayMode, onDisplayM
             </Button>
           ))}
         </div>
-      </SettingsCard>
+      </SettingsCard>}
 
       <SettingsCard title="强调色" subtitle="应用于邮箱、设置与后台的选中状态、焦点和主要操作。" surface="section">
         <div className="accent-swatches" role="group" aria-label="强调色">

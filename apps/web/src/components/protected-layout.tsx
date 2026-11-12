@@ -77,20 +77,7 @@ function ProtectedContent() {
   const visibleAdminSections = adminSections.filter((item) => hasAnyPermission(user, item.permissions) && (item.key !== "backups" || user.role === "admin"))
 
   if (isMailRoute || isProfileRoute) {
-    const query = new URLSearchParams(location.search)
-    const accounts = isProfileRoute && query.get("tab") === "mailboxes"
-    const root = isMailRoute ? location.pathname === "/mail" || location.pathname === "/" : accounts || !location.search
-    if (!isMobile || !root) return <Outlet />
-    return <div className="mobile-app-shell">
-      <div className="mobile-app-content"><Outlet /></div>
-      <nav className="mobile-app-nav" aria-label="主导航">
-        {[
-          { href: "/mail", label: "邮箱", icon: Inbox, active: isMailRoute },
-          { href: "/profile?tab=mailboxes", label: "账号", icon: UserCog, active: accounts },
-          { href: "/profile", label: "设置", icon: Settings, active: isProfileRoute && !accounts },
-        ].map(({ href, label, icon: Icon, active }) => <Link key={href} to={href} replace aria-current={active ? "page" : undefined}><Icon aria-hidden="true" /><span>{label}</span></Link>)}
-      </nav>
-    </div>
+    return <Outlet />
   }
   if (isMobile && isAdminRoute) return <div className="admin-workspace-theme"><Outlet /></div>
 
