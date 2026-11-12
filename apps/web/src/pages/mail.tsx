@@ -2187,6 +2187,7 @@ export function MailPage() {
   return (
     <div
       className="mail-wallpaper h-svh overflow-hidden"
+      data-reading={!!selectedId}
       data-mail-theme={selectedThemeId}
       data-density={displayMode}
       data-1p-ignore="true"
@@ -2238,8 +2239,9 @@ export function MailPage() {
                     <div className="h-svh min-h-0 overflow-hidden">{sidebarContent}</div>
                   </SheetContent>
                 </Sheet>
-                <div className="min-w-0 flex-1 text-sm font-semibold">{mailView === "label" && selectedLabel ? <Badge variant="outline" className="gap-1.5 rounded-md font-normal"><span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: labelDotColor(selectedLabel) }} />{selectedLabel.name}</Badge> : viewTitle}</div>
+                <div className="mobile-account-switcher min-w-0 flex-1"><MailboxSwitcher collapsed={false} mailboxes={mailboxList.data?.items || []} loading={mailboxList.isLoading} selectedMailboxId={selectedMailboxId} selectedMailbox={selectedMailbox} unreadCount={mailboxUnreadCount} hasCopyAction={false} onSelect={switchMailbox} /></div>
                 {mailTransferActions}
+                <Button size="icon" variant="ghost" className="h-11 w-11 shrink-0 rounded-full" aria-label="打开账号管理" onClick={() => navigate("/profile?tab=mailboxes")}><Avatar className="size-8"><AvatarFallback className="bg-primary/10 text-xs text-primary">{(me.data?.user.displayName || "N").slice(0, 1).toUpperCase()}</AvatarFallback></Avatar></Button>
                 {!compactMailLayout && mailRefreshTool}
                   {canSendMail && <Button type="button" size="icon" onClick={() => openCompose()} disabled={!selectedComposeMailbox} aria-label="写邮件"><PencilLine className="h-4 w-4" /></Button>}
               </header>
@@ -4061,19 +4063,19 @@ function CompactMessageRow({ message, active, checked, scheduled, onCheckedChang
       active && "mail-selected-row"
     )}>
       <div className="flex gap-3 sm:contents">
-        <Checkbox aria-label="选择邮件" checked={checked} onCheckedChange={(value) => onCheckedChange(value === true)} onClick={(event) => event.stopPropagation()} className="mt-0.5 shrink-0 sm:mt-0" />
+        <div className="mail-row-select relative shrink-0"><Checkbox aria-label="选择邮件" checked={checked} onCheckedChange={(value) => onCheckedChange(value === true)} onClick={(event) => event.stopPropagation()} className="mt-0.5 shrink-0 sm:mt-0" />{!checked && <span aria-hidden="true" className="pointer-events-none absolute inset-0 grid place-items-center text-sm font-medium text-primary sm:hidden">{senderName.slice(0, 1).toUpperCase()}</span>}</div>
         {message.isRead ? (
-          <MailCheck className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/70 sm:mt-0" />
+          <MailCheck className="hidden h-4 w-4 shrink-0 text-muted-foreground/70 sm:block" />
         ) : (
-          <Mail className="mt-0.5 h-4 w-4 shrink-0 fill-yellow-200 text-yellow-500 sm:mt-0" />
+          <Mail className="hidden h-4 w-4 shrink-0 fill-yellow-200 text-yellow-500 sm:block" />
         )}
-        <div className="min-w-0 flex-1 sm:contents">
+        <div className="mail-row-copy min-w-0 flex-1 sm:contents">
           <div className="flex min-w-0 items-center justify-between gap-2 sm:block">
             <div className="flex min-w-0 flex-1 items-center gap-1.5">
               <div className="min-w-0 truncate" title={senderTitle(message)}>{senderName}</div>
               {!message.isRead && <span className="h-2 w-2 shrink-0 rounded-full bg-primary" aria-label="未读" />}
             </div>
-            <div className="flex shrink-0 items-center gap-1 sm:hidden">
+            <div className="mail-row-meta flex shrink-0 items-center gap-1 sm:hidden">
               <time dateTime={message.receivedAt || message.sentAt} title={messageFullDate(message)} className="mail-message-date whitespace-nowrap text-right text-[11px] font-medium tabular-nums text-foreground/70">{messageDisplayDate(message)}</time>
               {canOrganize && <Button type="button" variant="ghost" size="icon" aria-label={message.isStarred ? "取消星标" : "添加星标"} className="h-6 w-6 text-muted-foreground hover:text-yellow-500" onClick={(event) => { event.stopPropagation(); onStar() }}>
                 <Star className={cn("h-3.5 w-3.5", message.isStarred && "fill-yellow-400 text-yellow-500")} />

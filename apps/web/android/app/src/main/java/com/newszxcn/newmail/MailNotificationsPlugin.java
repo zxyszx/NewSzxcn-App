@@ -103,6 +103,12 @@ public class MailNotificationsPlugin extends Plugin {
         });
     }
 
+    @PluginMethod public void appInfo(PluginCall call) {
+        JSObject result = new JSObject();
+        result.put("version", BuildConfig.VERSION_NAME);
+        call.resolve(result);
+    }
+
     @PluginMethod public void status(PluginCall call) {
         JSObject result = new JSObject();
         result.put("configured", BuildConfig.PUSH_CONFIGURED);

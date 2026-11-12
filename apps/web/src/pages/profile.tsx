@@ -1,4 +1,5 @@
 import * as React from "react"
+import { AppAbout } from "@/components/app-about"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { ArrowLeft, BarChart3, Ban, Bell, BellOff, BookOpen, Check, CheckCircle2, ChevronDown, ChevronUp, Clock3, Code2, Contact, Copy, ExternalLink, Eye, HardDrive, Image, Info, KeyRound, LogOut, Mail, MailCheck, MailX, Monitor, Moon, PencilLine, PlayCircle, Plus, RefreshCcw, Search, SendHorizontal, Settings, Share2, ShieldCheck, SlidersHorizontal, Sun, Trash2, Users, X } from "lucide-react"
@@ -34,7 +35,7 @@ import { ConfirmDialog } from "@/components/confirm-dialog"
 import { useToast } from "@/hooks/use-toast"
 
 type Tab = "profile" | "mailboxes" | "contacts" | "cleanup" | "cleanupQueue" | "rules" | "blocked" | "stats" | "apiTokens"
-type AccountSettingsTab = "account" | "mail" | "clients" | "security" | "appearance"
+type AccountSettingsTab = "account" | "mail" | "clients" | "security" | "appearance" | "about"
 type MailboxView = "mine" | "external" | "forwarding" | "verified"
 type PendingConfirm = { title: string; description?: string; confirmText: string; destructive?: boolean; onConfirm: () => void }
 type RetryableQuery = { isLoading: boolean; isError: boolean; error: Error | null; refetch: () => Promise<unknown> }
@@ -56,6 +57,7 @@ const accountSettingTabs: { key: AccountSettingsTab; label: string }[] = [
   { key: "clients", label: "通知与客户端" },
   { key: "security", label: "安全" },
   { key: "appearance", label: "外观" },
+  { key: "about", label: "关于" },
 ]
 const forwardingTargetCollator = new Intl.Collator("en", { sensitivity: "base", numeric: true })
 
@@ -434,7 +436,7 @@ export function ProfilePage() {
               <div className="min-w-0"><div className="break-words font-semibold">{user.displayName || "NewSzxcn"}</div><div className="break-all text-sm text-muted-foreground">{user.email || selectedMailbox?.address}</div></div>
             </div>
             {mobileAccountTabs.length > 0 && <section className="mobile-settings-group" aria-label="账号与偏好">
-              {mobileAccountTabs.map((item) => <MobileManagementRow key={item.key} label={item.label} icon={item.key === "security" ? <ShieldCheck /> : item.key === "clients" ? <Bell /> : item.key === "appearance" ? <Sun /> : item.key === "mail" ? <Mail /> : <Settings />} onClick={() => setAccountTab(item.key)} />)}
+              {mobileAccountTabs.map((item) => <MobileManagementRow key={item.key} label={item.label} icon={item.key === "about" ? <Info /> : item.key === "security" ? <ShieldCheck /> : item.key === "clients" ? <Bell /> : item.key === "appearance" ? <Sun /> : item.key === "mail" ? <Mail /> : <Settings />} onClick={() => setAccountTab(item.key)} />)}
             </section>}
             {mobileToolTabs.length > 0 && <section className="mobile-settings-group" aria-label="邮箱与工具">
               {mobileToolTabs.map((key) => <MobileManagementRow key={key} label={tabs[key].label} icon={tabs[key].icon} onClick={() => setTab(key)} />)}
@@ -563,7 +565,7 @@ export function ProfilePage() {
   }
   function visibleTabQueries(): RetryableQuery[] {
     if (tab === "profile") {
-      if (accountTab === "security" || accountTab === "appearance") return []
+      if (accountTab === "security" || accountTab === "appearance" || accountTab === "about") return []
       if (accountTab === "account") return [mailboxes, accountStats]
       if (accountTab === "mail") return [mailboxes, labels, signatures]
       return [mailboxes, publicSettings]
@@ -690,7 +692,9 @@ type AccountSettingsSectionProps = {
 
 function AccountSettingsSection(props: AccountSettingsSectionProps) {
   let content: React.ReactNode
-  if (props.activeTab === "appearance") {
+  if (props.activeTab === "about") {
+    content = <AppAbout />
+  } else if (props.activeTab === "appearance") {
     content = <AppearanceSettingsSection mode={props.themeMode} onModeChange={props.onThemeModeChange} displayMode={props.displayMode} onDisplayModeChange={props.onDisplayModeChange} />
   } else if (props.activeTab === "mail") {
     content = (
@@ -759,6 +763,11 @@ function AppearanceSettingsSection({ mode, onModeChange, displayMode, onDisplayM
         {(["detailed", "compact"] as DisplayMode[]).map((value) => <Button key={value} type="button" variant="ghost" aria-pressed={displayMode === value} onClick={() => onDisplayModeChange(value)}>{value === "detailed" ? "标准布局" : "紧凑布局"}</Button>)}
       </div>
       <div className="profile-continuous-panel">
+      <SettingsCard title="底部导航" subtitle="选择手机底栏的显示方式。" surface="section">
+        <div className="mail-density-segments" role="group" aria-label="底栏样式">
+          {(["fixed", "floating"] as const).map((style) => <Button key={style} variant="ghost" aria-pressed={appearance.bottomNavStyle === style} onClick={() => updateAppearance({ ...appearance, bottomNavStyle: style })}>{style === "fixed" ? "固定底栏" : "悬浮底栏"}</Button>)}
+        </div>
+      </SettingsCard>
       <SettingsCard title="显示模式" subtitle="控制邮箱与设置页面的明暗外观。" surface="section">
         <div className="appearance-segments" role="group" aria-label="显示模式">
           {([
